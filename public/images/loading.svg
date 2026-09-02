@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="margin:auto;background:transparent;display:block;" width="200" height="200" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" role="img" aria-label="Loading">
+  <circle cx="50" cy="50" r="15" fill="none" stroke="#499255" stroke-width="2" stroke-dasharray="23.56 23.56" stroke-linecap="round">
+    <animateTransform attributeName="transform" type="rotate" dur="1s" repeatCount="indefinite" values="0 50 50;360 50 50" />
+  </circle>
+  <circle cx="50" cy="50" r="12" fill="none" stroke="#00c5ff" stroke-width="2" stroke-dasharray="18.85 18.85" stroke-dashoffset="18.85" stroke-linecap="round">
+    <animateTransform attributeName="transform" type="rotate" dur="1s" repeatCount="indefinite" values="0 50 50;-360 50 50" />
+  </circle>
+</svg>

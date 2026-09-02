@@ -1,0 +1,13 @@
+# Runtime data
+admin/logs/
+config/sessions/
+i/cache/
+i/recycle/
+i/[0-9][0-9][0-9][0-9]/
+
+# Locks and generated helpers
+config/*.lock
+
+# OS noise
+.DS_Store
+Thumbs.db

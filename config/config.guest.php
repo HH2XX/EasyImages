@@ -1,0 +1,4 @@
+<?php
+$guestConfig=Array
+	(
+	);
