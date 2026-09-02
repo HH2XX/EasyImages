@@ -43,15 +43,6 @@ S3 兼容存储可用于 Cloudflare R2、Backblaze B2、MinIO、腾讯 COS、阿
 - `install/`：安装引导
 - `public/`：前端静态资源
 
-## 发布前安全检查
-
-公开或部署前建议确认：
-
-- `config/config.php` 不包含真实域名、邮箱、WebDAV、S3、FTP、TinyPng、ModerateContent 等密钥。
-- `config/api_key.php` 不包含真实 API Token。
-- `config/config.guest.php` 不包含真实访客账号。
-- `config/sessions/`、`admin/logs/`、`i/YYYY/`、`i/cache/`、`i/recycle/` 不应提交。
-- 如果曾经把真实密钥写入仓库，发布前请到对应服务商后台轮换密钥。
 
 ## 许可证
 
