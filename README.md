@@ -62,19 +62,6 @@ EasyImage 是一款无需数据库的 PHP 图床程序，支持多文件上传�
 - `install/`：安装相关目录
 - `public/`：前端静态资源
 
-## 发布前清理
-
-不要把以下运行时数据打包发布：
-
-- `admin/logs/` 内的登录、统计和版本缓存
-- `config/sessions/`
-- `i/cache/`、`i/recycle/`
-- `i/` 下按年份生成的上传目录
-- `config/api_key.php` 中的真实 API Token
-- `config/short_urls.php` 中的真实短链记录
-- WebDAV、S3、FTP、审核服务等任何真实密钥
-
-本仓库的公开源码只保留空的 Token 和短链配置文件。生产环境如果使用这些功能，请在服务器后台重新配置，不要把配置后的文件回传到公开仓库。
 
 ## 安全建议
 
