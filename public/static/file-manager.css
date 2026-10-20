@@ -1,0 +1,314 @@
+:root {
+    --fm-ink: #20303a;
+    --fm-muted: #70808a;
+    --fm-line: #dce6e8;
+    --fm-paper: #f4f8f8;
+    --fm-card: #ffffff;
+    --fm-primary: #12977f;
+    --fm-primary-dark: #0b6d60;
+    --fm-shadow: 0 14px 36px rgba(27, 58, 66, 0.08);
+}
+
+body.easy-file-manager {
+    min-height: 100vh;
+    color: var(--fm-ink) !important;
+    background:
+        radial-gradient(circle at 8% 0, rgba(18, 151, 127, 0.1), transparent 28%),
+        radial-gradient(circle at 94% 8%, rgba(217, 145, 53, 0.08), transparent 24%),
+        var(--fm-paper) !important;
+}
+
+body.easy-file-manager a {
+    color: var(--fm-primary-dark);
+    transition: color 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+body.easy-file-manager a:hover,
+body.easy-file-manager a:focus {
+    color: var(--fm-primary);
+}
+
+body.easy-file-manager .navbar,
+body.easy-file-manager .main-nav {
+    border: 0;
+    border-radius: 0 0 12px 12px !important;
+    box-shadow: var(--fm-shadow);
+}
+
+body.easy-file-manager .navbar-inverse {
+    background: linear-gradient(120deg, #163c42, #146e65);
+}
+
+body.easy-file-manager .navbar-inverse .navbar-brand,
+body.easy-file-manager .navbar-inverse .navbar-nav > li > a {
+    color: rgba(255, 255, 255, 0.86);
+}
+
+body.easy-file-manager .navbar-inverse .navbar-brand {
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+body.easy-file-manager .navbar-inverse .navbar-nav > li > a:hover,
+body.easy-file-manager .navbar-inverse .navbar-nav > li.active > a {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+body.easy-file-manager .container,
+body.easy-file-manager .container-fluid {
+    max-width: 1240px;
+}
+
+body.easy-file-manager .breadcrumb,
+body.easy-file-manager .card,
+body.easy-file-manager .upload,
+body.easy-file-manager .login {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--fm-line);
+    border-radius: 10px;
+    box-shadow: var(--fm-shadow);
+}
+
+body.easy-file-manager .breadcrumb {
+    padding: 10px 14px;
+    margin-top: 18px;
+}
+
+body.easy-file-manager .breadcrumb > li + li::before {
+    color: #a5b3b7;
+}
+
+body.easy-file-manager .login,
+body.easy-file-manager .upload {
+    padding: 24px;
+    margin: 48px auto;
+}
+
+body.easy-file-manager .login {
+    max-width: 390px;
+}
+
+body.easy-file-manager .view-image {
+    max-width: 95%;
+    padding: 8px;
+    background: var(--fm-card);
+    border: 1px solid var(--fm-line);
+    border-radius: 10px;
+    box-shadow: var(--fm-shadow);
+}
+
+body.easy-file-manager .form-control {
+    border-color: #ccdadd;
+    border-radius: 7px !important;
+    box-shadow: none;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+body.easy-file-manager .form-control:focus {
+    border-color: var(--fm-primary);
+    box-shadow: 0 0 0 3px rgba(18, 151, 127, 0.12);
+}
+
+body.easy-file-manager .btn {
+    border-radius: 7px !important;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+body.easy-file-manager .btn:hover,
+body.easy-file-manager .btn:focus {
+    transform: translateY(-1px);
+}
+
+body.easy-file-manager .btn-primary,
+body.easy-file-manager .btn-success {
+    color: #ffffff;
+    background: var(--fm-primary);
+    border-color: var(--fm-primary);
+}
+
+body.easy-file-manager .btn-primary:hover,
+body.easy-file-manager .btn-success:hover {
+    background: var(--fm-primary-dark);
+    border-color: var(--fm-primary-dark);
+    box-shadow: 0 8px 18px rgba(18, 151, 127, 0.2);
+}
+
+body.easy-file-manager .alert,
+body.easy-file-manager .message {
+    border-radius: 8px;
+}
+
+body.easy-file-manager .table,
+body.easy-file-manager .table-responsive {
+    background: var(--fm-card);
+    border-color: var(--fm-line);
+}
+
+body.easy-file-manager .table > thead > tr > th {
+    color: var(--fm-muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: #eef5f4;
+}
+
+body.easy-file-manager .main-nav + .container {
+    padding-top: 2px;
+}
+
+body.easy-file-manager .fm-upload-wrapper,
+body.easy-file-manager .fm-view-wrapper {
+    border-radius: 12px;
+    box-shadow: var(--fm-shadow);
+}
+
+body.easy-file-manager .fm-upload-wrapper .card-header,
+body.easy-file-manager .fm-view-wrapper .card-header {
+    color: var(--fm-ink);
+    font-weight: 700;
+    background: #eef5f4;
+    border-bottom-color: var(--fm-line);
+}
+
+body.easy-file-manager.theme-dark {
+    --fm-ink: #e4efed;
+    --fm-muted: #9bb0ae;
+    --fm-line: #294445;
+    --fm-paper: #101e20;
+    --fm-card: #172a2b;
+    --fm-primary: #38c7ab;
+    --fm-primary-dark: #78dfc8;
+    color: var(--fm-ink) !important;
+    background:
+        radial-gradient(circle at 8% 0, rgba(56, 199, 171, 0.12), transparent 28%),
+        var(--fm-paper) !important;
+}
+
+body.easy-file-manager.theme-dark .card,
+body.easy-file-manager.theme-dark .breadcrumb,
+body.easy-file-manager.theme-dark .table,
+body.easy-file-manager.theme-dark .table-responsive,
+body.easy-file-manager.theme-dark .upload,
+body.easy-file-manager.theme-dark .login {
+    color: var(--fm-ink);
+    background: var(--fm-card);
+    border-color: var(--fm-line);
+}
+
+body.easy-file-manager.theme-dark .form-control,
+body.easy-file-manager.theme-dark .table > thead > tr > th,
+body.easy-file-manager.theme-dark .fm-upload-wrapper .card-header,
+body.easy-file-manager.theme-dark .fm-view-wrapper .card-header {
+    color: var(--fm-ink);
+    background: #122426;
+    border-color: var(--fm-line);
+}
+
+body.easy-file-manager.theme-dark .text-muted,
+body.easy-file-manager.theme-dark .help-block,
+body.easy-file-manager.theme-dark .footer {
+    color: var(--fm-muted) !important;
+}
+
+body.easy-file-manager .card,
+body.easy-file-manager .breadcrumb,
+body.easy-file-manager .upload,
+body.easy-file-manager .login,
+body.easy-file-manager .view-image,
+body.easy-file-manager .fm-upload-wrapper,
+body.easy-file-manager .fm-view-wrapper {
+    border-radius: 10px !important;
+}
+
+body.easy-file-manager .file-list-grid .file {
+    border-color: var(--fm-line);
+    border-radius: 10px !important;
+    box-shadow: 0 5px 16px rgba(27, 58, 66, 0.05);
+    transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+body.easy-file-manager .file-list-grid .file:hover {
+    border-color: rgba(18, 151, 127, 0.48);
+    box-shadow: 0 12px 26px rgba(18, 151, 127, 0.12);
+    transform: translateY(-2px);
+}
+
+body.easy-file-manager .file-list-grid .file-wrapper > .content > .file-name {
+    border-radius: 6px !important;
+}
+
+body.easy-file-manager .file-list-grid .file-wrapper > .actions > .btn {
+    border-radius: 6px;
+}
+
+body.easy-file-manager.theme-dark .file-list-grid .file {
+    background: var(--fm-card);
+    border-color: var(--fm-line);
+}
+
+body.easy-file-manager.theme-dark .file-list-grid .file-wrapper > .content > .file-name {
+    color: var(--fm-ink);
+    background: #122426;
+    border-color: var(--fm-line);
+}
+
+body.easy-file-manager button:focus,
+body.easy-file-manager a:focus,
+body.easy-file-manager input:focus,
+body.easy-file-manager select:focus,
+body.easy-file-manager textarea:focus {
+    outline: 2px solid rgba(18, 151, 127, 0.42);
+    outline-offset: 2px;
+}
+
+@media screen and (max-width: 767px) {
+    body.easy-file-manager .navbar {
+        border-radius: 0;
+    }
+
+    body.easy-file-manager .login,
+    body.easy-file-manager .upload {
+        padding: 16px;
+        margin: 24px auto;
+    }
+
+    body.easy-file-manager .breadcrumb {
+        margin-top: 12px;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    body.easy-file-manager .table-responsive {
+        border: 0;
+    }
+
+    body.easy-file-manager .file-list-grid {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    body.easy-file-manager .file-list-grid .file {
+        float: none;
+        flex: 0 0 120px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.easy-file-manager a,
+    body.easy-file-manager .btn,
+    body.easy-file-manager .form-control {
+        transition: none;
+    }
+
+    body.easy-file-manager .btn:hover,
+    body.easy-file-manager .btn:focus {
+        transform: none;
+    }
+
+    body.easy-file-manager .file-list-grid .file:hover {
+        transform: none;
+    }
+}

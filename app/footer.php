@@ -102,14 +102,19 @@ if ($config['notice_status'] > 0) : ?>
     var applyDarkMode = function(enabled) {
       if (enabled) {
         $('body').addClass('dark');
+        $('#dark_ico').removeClass('icon-lightbulb').addClass('icon-sun');
+        $('#dark').attr('aria-pressed', 'true').attr('title', 'Switch to light mode');
       } else {
         $('body').removeClass('dark');
+        $('#dark_ico').removeClass('icon-sun').addClass('icon-lightbulb');
+        $('#dark').attr('aria-pressed', 'false').attr('title', 'Switch to dark mode');
       }
     };
 
     applyDarkMode(cookieUtil.getItem(darkKey) === '1');
 
-    $(document).on('click', '#dark', function() {
+    $(document).on('click', '#dark', function(event) {
+      event.preventDefault();
       var enabled = !$('body').hasClass('dark');
       applyDarkMode(enabled);
       cookieUtil.setItem(darkKey, enabled ? '1' : '0', 365);

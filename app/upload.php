@@ -21,7 +21,7 @@ if ($config['mustLogin']) {
     }
 }
 // 无文件
-if (empty($_FILES['file'])) {
+if (empty($_FILES['file']) || !is_array($_FILES['file'])) {
     exit(json_encode(
         array(
             "result"  => "failed",
@@ -32,8 +32,17 @@ if (empty($_FILES['file'])) {
     ));
 }
 
+if (!isset($_FILES['file']['error']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+    exit(json_encode(array(
+        "result" => "failed",
+        "code" => 400,
+        "message" => "Upload failed",
+    ), JSON_UNESCAPED_UNICODE));
+}
+
 // 校验上传令牌，防止跨站伪造上传
 $uploadToken = isset($_POST['upload_token']) ? $_POST['upload_token'] : '';
+$uploadToken = isset($_POST['upload_token']) && is_string($_POST['upload_token']) ? trim($_POST['upload_token']) : '';
 if (!validate_upload_token($uploadToken)) {
     exit(json_encode(
         array(
@@ -128,8 +137,15 @@ if ($config['ip_upload_counts'] > 0 && !is_who_login('status')) {
 
 // 分片上传
 if ($config['chunks']) {
-    $chunk = chunk($_POST['name']);
-    // exit($chunk);
+    $chunkName = isset($_POST['name']) && is_string($_POST['name']) ? $_POST['name'] : '';
+    $chunk = chunk($chunkName);
+    if ($chunk === null) {
+        exit(json_encode(array(
+            "result" => "success",
+            "code" => 201,
+            "message" => "分片已接收",
+        ), JSON_UNESCAPED_UNICODE));
+    }
     $handle = new Upload($chunk, 'zh_CN');
 } else {
     $handle = new Upload($_FILES['file'], 'zh_CN');
@@ -141,8 +157,15 @@ if ($handle->uploaded) {
         $handle->allowed = array('image/*');
     }
 
-    // 检查svg是否存在script和a标签代码
+    // SVG is disabled by default because blacklist-only sanitization is unsafe.
     if ($handle->file_src_name_ext === 'svg') {
+        if (empty($config['allow_svg'])) {
+            exit(json_encode(array(
+                "result" => "failed",
+                "code" => 415,
+                "message" => "SVG 上传已关闭，请转换为 PNG 或 WebP。",
+            ), JSON_UNESCAPED_UNICODE));
+        }
         $svg = file_get_contents($handle->file_src_pathname);
         if (preg_match('/<script[\s\S]*?<\/script>/', $svg) || stripos($svg, 'href=')) {
             exit(json_encode(

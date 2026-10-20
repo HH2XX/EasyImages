@@ -10,10 +10,40 @@ require_once APP_ROOT . '/config/config.guest.php';
  */
 function isGifAnimated($filename)
 {
-    $fp = fopen($filename, 'rb');
-    $filecontent = fread($fp, filesize($filename));
-    fclose($fp);
-    return strpos($filecontent, chr(0x21) . chr(0xff) . chr(0x0b) . 'NETSCAPE2.0') === FALSE ? 0 : 1;
+    return file_contains_marker($filename, chr(0x21) . chr(0xff) . chr(0x0b) . 'NETSCAPE2.0') ? 1 : 0;
+}
+
+/** Scan a file incrementally so large uploads do not consume another full copy in memory. */
+function file_contains_marker($filename, $marker, $chunkSize = 8192)
+{
+    if (!is_string($filename) || !is_string($marker) || $marker === '' || !is_file($filename)) {
+        return false;
+    }
+
+    $handle = @fopen($filename, 'rb');
+    if ($handle === false) {
+        return false;
+    }
+
+    $carry = '';
+    $carryLength = max(0, strlen($marker) - 1);
+    while (!feof($handle)) {
+        $data = fread($handle, $chunkSize);
+        if ($data === false || $data === '') {
+            break;
+        }
+
+        $buffer = $carry . $data;
+        if (strpos($buffer, $marker) !== false) {
+            fclose($handle);
+            return true;
+        }
+
+        $carry = $carryLength > 0 ? substr($buffer, -$carryLength) : '';
+    }
+
+    fclose($handle);
+    return false;
 }
 
 /**
@@ -23,14 +53,7 @@ function isGifAnimated($filename)
  */
 function isWebpAnimated($src)
 {
-    $webpFile = file_get_contents($src);
-    $info = strpos($webpFile, "ANMF");
-    if ($info !== FALSE) {
-        // animated
-        return true;
-    }
-    // not animated
-    return false;
+    return file_contains_marker($src, 'ANMF');
 
     /* 2023-01-24 判断webp是否为动画
     $result = false;
@@ -53,22 +76,17 @@ function isWebpAnimated($src)
  */
 function is_Gif_Webp_Animated($src)
 {
-    $ext = pathinfo($src)['extension'];
-
-    if ($ext == 'webp') {
-        $webpContents = file_get_contents($src);
-        $where = strpos($webpContents, "ANMF");
-        if ($where !== FALSE) {
-            // animated
-            return true;
-        }
+    if (!is_string($src) || !is_file($src)) {
         return false;
     }
 
-    $fp = fopen($src, 'rb');
-    $filecontent = fread($fp, filesize($src));
-    fclose($fp);
-    return strpos($filecontent, chr(0x21) . chr(0xff) . chr(0x0b) . 'NETSCAPE2.0') === FALSE ? false : true;
+    $ext = strtolower((string) pathinfo($src, PATHINFO_EXTENSION));
+
+    if ($ext == 'webp') {
+        return file_contains_marker($src, 'ANMF');
+    }
+
+    return file_contains_marker($src, chr(0x21) . chr(0xff) . chr(0x0b) . 'NETSCAPE2.0');
 }
 
 
@@ -89,7 +107,7 @@ function _login($user = null, $password = null)
         $session_auth = get_auth_session();
         if ($session_auth) {
             if ($session_auth[0] === $config['user']) {
-                return auth_hash_equals($config['password'], $session_auth[1])
+                return auth_secret_matches($config['password'], $session_auth[1])
                     ? json_encode(array('code' => 200, 'level' => 1, 'messege' => 'admin'))
                     : json_encode(array('code' => 400, 'level' => 0, 'messege' => 'password error'));
             }
@@ -98,7 +116,7 @@ function _login($user = null, $password = null)
                 return json_encode(array('code' => 400, 'level' => 0, 'messege' => 'account not found'));
             }
 
-            if (!auth_hash_equals($guestConfig[$session_auth[0]]['password'], $session_auth[1])) {
+            if (!auth_secret_matches($guestConfig[$session_auth[0]]['password'], $session_auth[1])) {
                 return json_encode(array('code' => 400, 'level' => 0, 'messege' => 'password error'));
             }
 
@@ -124,7 +142,7 @@ function _login($user = null, $password = null)
             }
 
             if ($browser_cookie[0] === $config['user']) {
-                if (auth_hash_equals($config['password'], $browser_cookie[1])) {
+                if (auth_secret_matches($config['password'], $browser_cookie[1])) {
                     return json_encode(array('code' => 200, 'level' => 1, 'messege' => 'admin'));
                 }
 
@@ -132,7 +150,7 @@ function _login($user = null, $password = null)
             }
 
             if (array_key_exists($browser_cookie[0], $guestConfig)) {
-                if (!auth_hash_equals($guestConfig[$browser_cookie[0]]['password'], $browser_cookie[1])) {
+                if (!auth_secret_matches($guestConfig[$browser_cookie[0]]['password'], $browser_cookie[1])) {
                     return json_encode(array('code' => 400, 'level' => 0, 'messege' => 'password error'));
                 }
 
@@ -151,7 +169,7 @@ function _login($user = null, $password = null)
     $user = strip_tags($user);
     $password = strip_tags($password);
     if ($user === $config['user']) {
-        if (auth_hash_equals($config['password'], $password)) {
+        if (auth_secret_matches($config['password'], $password)) {
             set_auth_session($user, $password);
             return json_encode(array('code' => 200, 'level' => 1, 'messege' => 'admin login success'));
         }
@@ -160,7 +178,7 @@ function _login($user = null, $password = null)
     }
 
     if (array_key_exists($user, $guestConfig)) {
-        if (!auth_hash_equals($guestConfig[$user]['password'], $password)) {
+        if (!auth_secret_matches($guestConfig[$user]['password'], $password)) {
             return json_encode(array('code' => 400, 'level' => 0, 'messege' => 'password error'));
         }
 
@@ -188,14 +206,14 @@ function checkLogin()
     $session_auth = get_auth_session();
     if ($session_auth) {
         if ($session_auth[0] === $config['user']) {
-            return auth_hash_equals($config['password'], $session_auth[1]) ? 204 : 203;
+            return auth_secret_matches($config['password'], $session_auth[1]) ? 204 : 203;
         }
 
         if (!array_key_exists($session_auth[0], $guestConfig)) {
             return 203;
         }
 
-        if (!auth_hash_equals($guestConfig[$session_auth[0]]['password'], $session_auth[1])) {
+        if (!auth_secret_matches($guestConfig[$session_auth[0]]['password'], $session_auth[1])) {
             return 203;
         }
 
@@ -216,14 +234,14 @@ function checkLogin()
         }
 
         if ($getCOK[0] === $config['user']) {
-            return auth_hash_equals($config['password'], $getCOK[1]) ? 204 : 203;
+            return auth_secret_matches($config['password'], $getCOK[1]) ? 204 : 203;
         }
 
         if (!array_key_exists($getCOK[0], $guestConfig)) {
             return 203;
         }
 
-        if (!auth_hash_equals($guestConfig[$getCOK[0]]['password'], $getCOK[1])) {
+        if (!auth_secret_matches($guestConfig[$getCOK[0]]['password'], $getCOK[1])) {
             return 203;
         }
 
@@ -298,6 +316,35 @@ function auth_hash_equals($known, $userInput)
     return $known === $userInput;
 }
 
+/**
+ * Verify a submitted client-side secret against both new password hashes and
+ * legacy SHA-256 values. The browser still sends SHA-256 for compatibility.
+ */
+function auth_secret_matches($stored, $submitted)
+{
+    if (!is_string($stored) || !is_string($submitted)) {
+        return false;
+    }
+
+    $passwordInfo = password_get_info($stored);
+    if (!empty($passwordInfo['algo'])) {
+        return password_verify($submitted, $stored);
+    }
+
+    return auth_hash_equals($stored, $submitted);
+}
+
+function hash_auth_secret($submitted)
+{
+    if (!is_string($submitted)) {
+        return '';
+    }
+
+    return function_exists('password_hash')
+        ? password_hash($submitted, PASSWORD_DEFAULT)
+        : hash('sha256', $submitted);
+}
+
 function create_secure_token($bytes = 32)
 {
     if (function_exists('random_bytes')) {
@@ -335,6 +382,26 @@ function validate_upload_token($token)
     }
 
     return auth_hash_equals($_SESSION['easyimage_upload_token'], $token);
+}
+
+function get_csrf_token()
+{
+    ensure_auth_session();
+
+    if (empty($_SESSION['easyimage_csrf_token']) || !is_string($_SESSION['easyimage_csrf_token'])) {
+        $_SESSION['easyimage_csrf_token'] = create_secure_token();
+    }
+
+    return $_SESSION['easyimage_csrf_token'];
+}
+
+function validate_csrf_token($token)
+{
+    if (!is_string($token) || $token === '') {
+        return false;
+    }
+
+    return auth_hash_equals(get_csrf_token(), $token);
 }
 
 function get_auth_cookie()
@@ -425,11 +492,13 @@ function mustLogin()
     if ($config['mustLogin']) {
         $status = _login();
         $status = json_decode($status, true);
+        $message = isset($status['messege']) ? (string) $status['messege'] : '';
+        $message = json_encode($message, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
         if ($status['code'] === 200) {
             echo '
             <script> 
-                new $.zui.Messager("' . $status["messege"] . '", {
+                new $.zui.Messager(' . $message . ', {
                 type: "success", // 定义颜色主题 
                 icon: "linux", // 定义消息图标
                 placement:"bottom-right" // 消息位置
@@ -440,7 +509,7 @@ function mustLogin()
         if ($status['code'] === 400) {
             echo '
             <script>
-                new $.zui.Messager("' . $status["messege"] . '", {
+                new $.zui.Messager(' . $message . ', {
                 type: "danger", // 定义颜色主题 
                 icon: "bullhorn" // 定义消息图标
             }).show();
@@ -482,6 +551,41 @@ function config_path($path = null)
     }
 
     return $img_path;
+}
+
+/** Resolve a request path to an existing file inside the configured upload directory. */
+function resolve_upload_file($path)
+{
+    global $config;
+
+    if (!is_string($path) || trim($path) === '') {
+        return false;
+    }
+
+    $path = trim($path);
+    if (preg_match('#^https?://#i', $path)) {
+        $parsedPath = parse_url($path, PHP_URL_PATH);
+        $path = is_string($parsedPath) ? $parsedPath : '';
+    }
+
+    $path = rawurldecode(str_replace('\\', '/', $path));
+    $uploadRoot = realpath(APP_ROOT . '/' . ltrim((string) $config['path'], '/\\'));
+    if ($uploadRoot === false) {
+        return false;
+    }
+
+    $candidate = realpath(APP_ROOT . '/' . ltrim($path, '/'));
+    if ($candidate === false || !is_file($candidate)) {
+        return false;
+    }
+
+    $uploadRoot = rtrim(str_replace('\\', '/', $uploadRoot), '/');
+    $candidate = str_replace('\\', '/', $candidate);
+    if (strncmp($candidate, $uploadRoot . '/', strlen($uploadRoot) + 1) !== 0) {
+        return false;
+    }
+
+    return $candidate;
 }
 
 /**
@@ -813,6 +917,12 @@ function urlHash($data, $mode, $key = null)
  */
 function getDel($url, $type)
 {
+    $resolvedPath = resolve_upload_file($url);
+    if ($resolvedPath !== false && @unlink($resolvedPath)) {
+        return true;
+    }
+    return false;
+
     global $config;
     // url本地化
     $url = htmlspecialchars(str_replace($config['domain'], '', $url)); // 过滤html 获取url path
@@ -844,6 +954,13 @@ function getDel($url, $type)
  */
 function easyimage_delete($url, $type)
 {
+    $resolvedPath = resolve_upload_file($url);
+    if ($resolvedPath !== false && @unlink($resolvedPath)) {
+        clearstatcache(true, $resolvedPath);
+        return true;
+    }
+    return false;
+
     global $config;
     // url本地化
     $url = htmlspecialchars(str_replace($config['domain'], '', $url)); // 过滤html 获取url path
@@ -1026,12 +1143,12 @@ function moderatecontent_json($img, $url = null)
         exit;
     }
 
-    $url = 'https://api.moderatecontent.com/moderate/?key=' . $config['moderatecontent_key'] . '&url=' . $img;
+    $url = 'https://api.moderatecontent.com/moderate/?key=' . rawurlencode($config['moderatecontent_key']) . '&url=' . rawurlencode($img);
     $headerArray = array("Content-type:application/json;", "Accept:application/json");
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headerArray);
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
@@ -1067,8 +1184,8 @@ function nsfwjs_json($url, $data = '')
         $params[CURLOPT_POST] = true;
         $params[CURLOPT_POSTFIELDS] = $data;
     }
-    $params[CURLOPT_SSL_VERIFYPEER] = false; //请求https时设置,还有其他解决方案
-    $params[CURLOPT_SSL_VERIFYHOST] = false; //请求https时,其他方案查看其他博文
+    $params[CURLOPT_SSL_VERIFYPEER] = true;
+    $params[CURLOPT_SSL_VERIFYHOST] = 2;
     curl_setopt_array($ch, $params); //传入curl参数
     $content = curl_exec($ch); //执行
     curl_close($ch); //关闭连接
@@ -1086,10 +1203,17 @@ function nsfwjs_json($url, $data = '')
 function checkImg($imageUrl, $type = 1, $dir = 'suspic/')
 {
     global $config;
+    $bad_pic = false;
 
     /** # 使用moderatecontent */
     if ($type === 1) {
         $response = moderatecontent_json($imageUrl);
+        $response = is_array($response) ? $response : array();
+        $response['rating_index'] = isset($response['rating_index']) ? (int) $response['rating_index'] : 0;
+        if (!isset($response['predictions']) || !is_array($response['predictions'])) {
+            $response['predictions'] = array();
+        }
+        $response['predictions']['adult'] = isset($response['predictions']['adult']) ? (float) $response['predictions']['adult'] : 0;
         if ($response['rating_index'] == 3 or $response['predictions']['adult'] > $config['checkImg_value']) { // (1 = everyone, 2 = teen, 3 = adult)
             $bad_pic = true;
         }
@@ -1113,23 +1237,28 @@ function checkImg($imageUrl, $type = 1, $dir = 'suspic/')
          */
 
         $file = nsfwjs_json($imageUrl);
+        $file = is_array($file) ? $file : array();
+        $res = array('Sexy' => 0, 'Porn' => 0, 'Hentai' => 0);
 
         // 将获取的值删除className后组建数组
-        for ($i = 0; $i <= count($file); $i++) {
-            if ($file[$i]['className'] == 'Drawing') {
-                $res['Drawing'] = $file[$i]['probability'];
+        foreach ($file as $item) {
+            if (!is_array($item)) {
+                continue;
             }
-            if ($file[$i]['className'] == 'Hentai') {
-                $res['Hentai'] = $file[$i]['probability'];
+            if (isset($item['className']) && $item['className'] == 'Drawing') {
+                $res['Drawing'] = isset($item['probability']) ? (float) $item['probability'] : 0;
             }
-            if ($file[$i]['className'] == 'Neutral') {
-                $res['Neutral'] = $file[$i]['probability'];
+            if (isset($item['className']) && $item['className'] == 'Hentai') {
+                $res['Hentai'] = isset($item['probability']) ? (float) $item['probability'] : 0;
             }
-            if ($file[$i]['className'] == 'Porn') {
-                $res['Porn'] = $file[$i]['probability'];
+            if (isset($item['className']) && $item['className'] == 'Neutral') {
+                $res['Neutral'] = isset($item['probability']) ? (float) $item['probability'] : 0;
             }
-            if ($file[$i]['className'] == 'Sexy') {
-                $res['Sexy'] = $file[$i]['probability'];
+            if (isset($item['className']) && $item['className'] == 'Porn') {
+                $res['Porn'] = isset($item['probability']) ? (float) $item['probability'] : 0;
+            }
+            if (isset($item['className']) && $item['className'] == 'Sexy') {
+                $res['Sexy'] = isset($item['probability']) ? (float) $item['probability'] : 0;
             }
         }
 
@@ -1429,14 +1558,25 @@ function arrayeval($array, $format = false, $level = 0)
  */
 function writefile($filename, $writetext, $openmod = 'w')
 {
-    if (false !== $fp = fopen($filename, $openmod)) {
-        flock($fp, 2);
-        fwrite($fp, $writetext);
-        fclose($fp);
-        return true;
-    } else {
+    // Lock before truncating so concurrent config/log writes cannot overwrite
+    // each other between fopen() and flock().
+    $mode = $openmod === 'w' ? 'c+' : $openmod;
+    $fp = @fopen($filename, $mode);
+    if ($fp === false || !@flock($fp, LOCK_EX)) {
+        if ($fp !== false) fclose($fp);
         return false;
     }
+
+    $ok = @ftruncate($fp, 0);
+    if ($ok) {
+        rewind($fp);
+        $ok = false !== @fwrite($fp, $writetext);
+        fflush($fp);
+    }
+
+    @flock($fp, LOCK_UN);
+    fclose($fp);
+    return $ok;
 }
 
 /**
@@ -1446,44 +1586,32 @@ function writefile($filename, $writetext, $openmod = 'w')
  */
 function real_ip()
 {
+    global $config;
     static $realip = NULL;
     if ($realip !== NULL) {
         return $realip;
     }
-    if (isset($_SERVER)) {
-        if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            $arr = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-            /* 取X-Forwarded-For中第一个非unknown的有效IP字符串 */
-            foreach ($arr as $ip) {
-                $ip = trim($ip);
+    $remoteAddr = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
+    $realip = $remoteAddr;
 
-                if ($ip != 'unknown') {
-                    $realip = $ip;
-
-                    break;
-                }
+    // Only trust forwarding headers from explicitly configured proxies.
+    $trustedProxies = isset($config['trusted_proxies']) ? $config['trusted_proxies'] : '';
+    $trustedProxies = is_array($trustedProxies) ? $trustedProxies : explode(',', (string) $trustedProxies);
+    $trustedProxies = array_filter(array_map('trim', $trustedProxies));
+    if (in_array($remoteAddr, $trustedProxies, true)) {
+        $forwarded = isset($_SERVER['HTTP_X_FORWARDED_FOR']) ? $_SERVER['HTTP_X_FORWARDED_FOR'] : '';
+        foreach (explode(',', $forwarded) as $candidate) {
+            $candidate = trim($candidate);
+            if (filter_var($candidate, FILTER_VALIDATE_IP)) {
+                $realip = $candidate;
+                break;
             }
-        } elseif (isset($_SERVER['HTTP_CLIENT_IP'])) {
-            $realip = $_SERVER['HTTP_CLIENT_IP'];
-        } else {
-            if (isset($_SERVER['REMOTE_ADDR'])) {
-                $realip = $_SERVER['REMOTE_ADDR'];
-            } else {
-                $realip = '0.0.0.0';
-            }
-        }
-    } else {
-        if (getenv('HTTP_X_FORWARDED_FOR')) {
-            $realip = getenv('HTTP_X_FORWARDED_FOR');
-        } elseif (getenv('HTTP_CLIENT_IP')) {
-            $realip = getenv('HTTP_CLIENT_IP');
-        } else {
-            $realip = getenv('REMOTE_ADDR');
         }
     }
-    // 使用正则验证IP地址的有效性，防止伪造IP地址进行SQL注入攻击
-    preg_match("/[\d\.]{7,15}/", $realip, $onlineip);
-    $realip = !empty($onlineip[0]) ? $onlineip[0] : '0.0.0.0';
+
+    if (!filter_var($realip, FILTER_VALIDATE_IP)) {
+        $realip = '0.0.0.0';
+    }
     return $realip;
 }
 
@@ -1496,7 +1624,7 @@ function real_ip()
  */
 function checkIP($ipNow = null, $ipList = null, $model = false)
 {
-    $ipNow = isset($ipNow) ?: real_ip();
+    $ipNow = $ipNow ?: real_ip();
 
     // 将IP文本转换为数组
     if (is_string($ipList)) {
@@ -1583,7 +1711,9 @@ function check_api($token)
         exit(json_encode($reJson, JSON_UNESCAPED_UNICODE));
     }
 
-    if ($tokenList[$token]['expired'] < time()) {
+    if (!isset($tokenList[$token]['id']) || !is_scalar($tokenList[$token]['id'])
+        || !isset($tokenList[$token]['expired']) || !is_numeric($tokenList[$token]['expired'])
+        || $tokenList[$token]['expired'] < time()) {
         // Token 过期
         $reJson = array(
             "result" => 'failed',
@@ -2086,29 +2216,76 @@ function any_upload($remoteFile = null, $localFile = null, $way = 'upload')
 function chunk($target_name)
 {
     global $config;
-    // 分片缓存目录
-    $temp_dir = APP_ROOT . $config['path'] . 'cache/' . $target_name . '/';
-    // 分片合并后的文件
-    $target_file = APP_ROOT . $config['path'] . 'cache/' . $target_name;
-    // 储存分片
-    if (!is_dir($temp_dir)) mkdir($temp_dir, 0755, true);
-    // 检查分片参数
-    if (!is_numeric($_REQUEST['chunk']) || !is_numeric($_REQUEST['chunks'])) {
-        die('Invalid input'); // or die('Invalid input');
+    $target_name = is_string($target_name) ? $target_name : '';
+    if (!preg_match('/^[A-Za-z0-9._-]{1,128}$/', $target_name)) {
+        die('Invalid chunk name');
     }
-    // 移动缓存分片
-    move_uploaded_file($_FILES['file']['tmp_name'], $temp_dir . $_REQUEST['chunk']);
-    // 合并分片
-    if ($_REQUEST['chunk'] == $_REQUEST['chunks'] - 1) { // 最后一个分片
-        if (!is_dir($target_file)) mkdir($target_file, 0755, true);
-        $handle = fopen($target_name, 'x+');
-        for ($i = 0; $i < $_REQUEST['chunks']; $i++) {
-            fwrite($handle, file_get_contents($temp_dir . $i));
+
+    $chunkIndex = isset($_REQUEST['chunk']) && ctype_digit((string) $_REQUEST['chunk'])
+        ? (int) $_REQUEST['chunk'] : -1;
+    $chunkCount = isset($_REQUEST['chunks']) && ctype_digit((string) $_REQUEST['chunks'])
+        ? (int) $_REQUEST['chunks'] : 0;
+    if ($chunkIndex < 0 || $chunkCount < 1 || $chunkCount > 10000 || $chunkIndex >= $chunkCount) {
+        die('Invalid chunk input');
+    }
+    if (empty($_FILES['file']['tmp_name']) || !is_uploaded_file($_FILES['file']['tmp_name'])) {
+        die('Invalid chunk file');
+    }
+
+    $cacheRoot = APP_ROOT . $config['path'] . 'cache/';
+    $chunkKey = hash('sha256', $target_name);
+    $tempDir = $cacheRoot . $chunkKey . '/';
+    $targetFile = $cacheRoot . $chunkKey . '.upload';
+    if (!is_dir($tempDir) && !mkdir($tempDir, 0755, true)) {
+        die('Unable to create chunk directory');
+    }
+
+    if (!move_uploaded_file($_FILES['file']['tmp_name'], $tempDir . $chunkIndex)) {
+        die('Unable to save chunk');
+    }
+
+    if ($chunkIndex !== $chunkCount - 1) {
+        return null;
+    }
+
+    if ($chunkIndex === $chunkCount - 1) {
+        $handle = @fopen($targetFile, 'wb');
+        if ($handle === false) {
+            die('Unable to merge chunks');
+        }
+
+        $maxSize = isset($config['maxSize']) && is_numeric($config['maxSize']) ? (int) $config['maxSize'] : 0;
+        $totalSize = 0;
+        for ($i = 0; $i < $chunkCount; $i++) {
+            $part = $tempDir . $i;
+            if (!is_file($part)) {
+                fclose($handle);
+                @unlink($targetFile);
+                die('Missing chunk');
+            }
+            $partSize = filesize($part);
+            $totalSize += $partSize === false ? 0 : $partSize;
+            if ($maxSize > 0 && $totalSize > $maxSize) {
+                fclose($handle);
+                @unlink($targetFile);
+                die('File exceeds maximum size');
+            }
+            $input = @fopen($part, 'rb');
+            if ($input === false || false === stream_copy_to_stream($input, $handle)) {
+                if ($input !== false) {
+                    fclose($input);
+                }
+                fclose($handle);
+                @unlink($targetFile);
+                die('Unable to merge chunks');
+            }
+            fclose($input);
         }
         fclose($handle);
-        deldir($temp_dir); // 删除临时目录
+        deldir($tempDir);
     }
-    return $target_name;
+
+    return $targetFile;
 }
 
 // Remote storage helpers for WebDAV/S3 upload channels.
@@ -2162,6 +2339,22 @@ function remote_storage_clean_path($path, $stripUploadBase = false)
 
     $path = urldecode($path);
     $path = '/' . ltrim($path, '/');
+
+    $normalizedParts = array();
+    foreach (explode('/', $path) as $part) {
+        if ($part === '' || $part === '.') {
+            continue;
+        }
+        if ($part === '..') {
+            if (empty($normalizedParts)) {
+                return '/';
+            }
+            array_pop($normalizedParts);
+            continue;
+        }
+        $normalizedParts[] = $part;
+    }
+    $path = '/' . implode('/', $normalizedParts);
 
     if ($stripUploadBase && !empty($config['path'])) {
         $uploadBase = '/' . trim(str_replace('\\', '/', (string) $config['path']), '/') . '/';

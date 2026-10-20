@@ -68,6 +68,13 @@ define('FILE_CACHE_TIME_BETWEEN_CLEANS', $cache_freq);   // 多久清理一次�
 define('FILE_CACHE_MAX_FILE_AGE', $cache_freq);          // 文件必须从缓存中删除多长时间
 define('BROWSER_CACHE_MAX_AGE', $cache_freq);            // 浏览器缓存时间
 
+if (!defined('FILE_CACHE_TIME_BETWEEN_CLEANS')) {
+    define('FILE_CACHE_TIME_BETWEEN_CLEANS', $cache_freq);
+}
+if (!defined('FILE_CACHE_MAX_FILE_AGE')) {
+    define('FILE_CACHE_MAX_FILE_AGE', $cache_freq);
+}
+
 global $ALLOWED_SITES;
 $ALLOWED_SITES = array(
     $config['domain'],
@@ -81,7 +88,36 @@ if (isset($_GET['img'])) {
 
     // 引入文件
     require_once __DIR__ . '/TimThumb.php';
-    $src = $_GET['img'];
+    $src = rawurldecode((string) $_GET['img']);
+    if (preg_match('#^https?://#i', $src)) {
+        $requestHost = strtolower((string) parse_url($src, PHP_URL_HOST));
+        $allowedHosts = array();
+        foreach (array($config['domain'], $config['imgurl']) as $site) {
+            $siteHost = parse_url((string) $site, PHP_URL_HOST);
+            if (is_string($siteHost) && $siteHost !== '') {
+                $allowedHosts[] = strtolower($siteHost);
+            }
+        }
+        if ($requestHost === '' || !in_array($requestHost, array_unique($allowedHosts), true)) {
+            http_response_code(403);
+            exit('Image host is not allowed');
+        }
+        $src = (string) parse_url($src, PHP_URL_PATH);
+    }
+
+    $localImage = resolve_upload_file($src);
+    if ($localImage === false) {
+        $localImage = resolve_upload_file($config['path'] . ltrim($src, '/\\'));
+    }
+    if ($localImage === false) {
+        http_response_code(404);
+        header('Content-Type: image/png');
+        readfile(APP_ROOT . '/public/images/404.png');
+        exit;
+    }
+
+    $src = str_replace('\\', '/', substr($localImage, strlen(APP_ROOT)));
+    $_GET['img'] = $src;
 
     // 重定向不包含存储路径的缩略图地址
     if (!stristr($src, $config['path'])) {

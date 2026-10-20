@@ -1,9 +1,8 @@
 <?php
 
 // 开启 DEBUG 2023-04-03
-if (!ini_get('display_errors')) {
-    ini_set('display_errors', 'On');
-}
+$easyImageDebug = getenv('EASYIMAGE_DEBUG') === '1';
+ini_set('display_errors', $easyImageDebug ? '1' : '0');
 error_reporting(E_ALL);
 
 // 检查当前PHP版本是否大于7.0

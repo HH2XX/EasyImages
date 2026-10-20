@@ -99,7 +99,7 @@ $frontUploadAvailable = $frontStorageDriver !== 'none';
     </div>
   </section>
 
-  <section class="easy-result-card">
+  <section class="easy-result-card is-empty">
     <div class="easy-section-heading">
       <div>
         <h2>上传结果</h2>
@@ -261,8 +261,28 @@ $frontUploadAvailable = $frontStorageDriver !== 'none';
     },
     <?php echo imgRatio(); ?>,
     responseHandler: function(responseObject, file) {
+      try {
       var obj = JSON.parse(responseObject.response); //由JSON字符串转换为JSON对象
+      } catch (error) {
+        new $.zui.Messager('服务器返回了无效响应，请稍后重试', {
+          type: 'danger',
+          placement: 'bottom-right',
+          icon: 'times'
+        }).show();
+        return;
+      }
+
+      if (!obj || typeof obj !== 'object') {
+        new $.zui.Messager('服务器返回了无效响应，请稍后重试', {
+          type: 'danger',
+          placement: 'bottom-right',
+          icon: 'times'
+        }).show();
+        return;
+      }
+
       if (obj.code === 200) {
+        document.querySelector('.easy-result-card').classList.remove('is-empty');
         $("#links").append(obj.url + "\r\n");
         $("#bbscode").append("[img]" + obj.url + "[/img]\r\n");
         $("#markdown").append("![" + obj.srcName + "](" + obj.url + ")\r\n");

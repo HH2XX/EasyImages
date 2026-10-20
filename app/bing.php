@@ -1,54 +1,89 @@
 <?php
 
-/**
- * php抓取bing每日图片并保存到服务器
- * 作者：mengkun (mkblog.cn)
- * 日期：2016/12/23
- * 修改：Icret
- * 修改日期：2023-03-09
- */
-include_once __DIR__ . '/function.php';
-include_once APP_ROOT . '/config/config.php';
+require_once __DIR__ . '/function.php';
+require_once APP_ROOT . '/config/config.php';
 
-$path = APP_ROOT . $config['path'] . $config['delDir']; // 设置图片缓存文件夹
-$filename = date("Ymd") . '.jpg';          // 用年月日来命名新的文件名
-if (file_exists($path . $filename))        // 如果文件不存在，则说明今天还没有进行缓存
-{
-    header("Content-type: image/jpeg");
-    exit(file_get_contents($path . $filename, true));
-} else {
+$cacheDir = APP_ROOT . $config['path'] . $config['delDir'];
+$filename = date('Ymd') . '.jpg';
+$cachedFile = $cacheDir . $filename;
 
-    if (!file_exists($path)) //如果目录不存在
-    {
-        mkdir($path, 0777);  //创建缓存目录
-    }
-    $str = file_get_contents('http://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1'); //读取必应api，获得相应数据
-    $str = json_decode($str, true);
-    $imgurl = 'http://cn.bing.com' . $str['images'][0]['url'];  //获取图片url
-    $img = grabImage($imgurl, $path .  $filename);              //读取并保存图片
-}
-/**
- * 远程抓取图片并保存
- * @param $url 图片url
- * @param $filename 保存名称和路径
- */
-function grabImage($url, $filename = "")
-{
-    if ($url == "") return false;       //如果$url地址为空，直接退出
-    if ($filename == "")                //如果没有指定新的文件名
-    {
-        $ext = strrchr($url, ".");      //得到$url的图片格式
-        $filename = date("Ymd") . $ext; //用天月面时分秒来命名新的文件名
-    }
-    ob_start();                         //打开输出
-    readfile($url);                     //输出图片文件
-    $img = ob_get_contents();           //得到浏览器输出
-    ob_end_clean();                     //清除输出并关闭
-    $fp2 = @fopen($filename, "w+");
-    fwrite($fp2, $img);                 //向当前目录写入图片文件，并重新命名
-    fclose($fp2);
-    return $filename;                   //返回新的文件名
+if (is_file($cachedFile) && filesize($cachedFile) > 0) {
+    outputJpeg($cachedFile);
 }
 
-header("Content-type: image/jpeg");
-exit(file_get_contents($path . $filename, true));
+$cachedFiles = glob($cacheDir . '*.jpg');
+if (is_array($cachedFiles) && $cachedFiles) {
+    usort($cachedFiles, function ($left, $right) {
+        return filemtime($right) <=> filemtime($left);
+    });
+    if (is_file($cachedFiles[0]) && filesize($cachedFiles[0]) > 0) {
+        outputJpeg($cachedFiles[0]);
+    }
+}
+
+if (!is_dir($cacheDir) && !@mkdir($cacheDir, 0755, true) && !is_dir($cacheDir)) {
+    outputFallback();
+}
+
+$apiUrl = 'https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1';
+$apiResponse = fetchRemote($apiUrl, 10);
+$apiData = $apiResponse !== false ? json_decode($apiResponse, true) : null;
+$imagePath = is_array($apiData) && !empty($apiData['images'][0]['url'])
+    ? (string) $apiData['images'][0]['url']
+    : '';
+
+if ($imagePath === '') {
+    outputFallback();
+}
+
+$imageUrl = strpos($imagePath, 'https://') === 0
+    ? $imagePath
+    : 'https://www.bing.com' . (strpos($imagePath, '/') === 0 ? $imagePath : '/' . $imagePath);
+$imageData = fetchRemote($imageUrl, 20);
+
+if ($imageData === false || $imageData === '') {
+    outputFallback();
+}
+
+$tempFile = $cachedFile . '.tmp.' . getmypid();
+if (@file_put_contents($tempFile, $imageData, LOCK_EX) === false || !@rename($tempFile, $cachedFile)) {
+    @unlink($tempFile);
+    outputFallback();
+}
+
+outputJpeg($cachedFile);
+
+function fetchRemote($url, $timeout)
+{
+    $curl = curl_init($url);
+    curl_setopt_array($curl, array(
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => $timeout,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+        CURLOPT_USERAGENT => 'EasyImage/1.0',
+    ));
+    $body = curl_exec($curl);
+    $status = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+    curl_close($curl);
+
+    return $body !== false && $status >= 200 && $status < 300 ? $body : false;
+}
+
+function outputJpeg($file)
+{
+    header('Content-Type: image/jpeg');
+    header('Cache-Control: public, max-age=3600');
+    readfile($file);
+    exit;
+}
+
+function outputFallback()
+{
+    header('Content-Type: image/svg+xml; charset=UTF-8');
+    header('Cache-Control: public, max-age=300');
+    echo '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dff7ee"/><stop offset="1" stop-color="#b7d9ef"/></linearGradient></defs><rect width="1600" height="900" fill="url(#g)"/><circle cx="1260" cy="180" r="190" fill="#ffffff" fill-opacity=".32"/><circle cx="320" cy="760" r="260" fill="#ffffff" fill-opacity=".2"/></svg>';
+    exit;
+}

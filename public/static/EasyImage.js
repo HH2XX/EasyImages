@@ -34,7 +34,7 @@ function uploadCopy(copyID, loadClass) {
     var $btn = $(loadClass);
     $btn.addClass('btn-success');
     // $btn.addClass('btn-success load-indicator loading');
-    $btn.remove('data-toggle data-original-title');
+    $btn.removeAttr('data-toggle data-original-title');
     $btn.button('loading');
     // 此处使用 setTimeout 来模拟复杂功能逻辑
     setTimeout(function () {
@@ -58,7 +58,6 @@ function uploadCopy(copyID, loadClass) {
         }
 
         var items = ((e.clipboardData || window.clipboardData).items) || [];
-        console.log(e)
         var file = null;
         $("#upShowID").addClass("load-indicator loading"); // 增加正在上传状态 2-1
         if (items && items.length) {
@@ -76,6 +75,8 @@ function uploadCopy(copyID, loadClass) {
             $.zui.messager.show('粘贴内容非图片!', { icon: 'bell', time: 3000, type: 'danger', placement: 'top' }); return;
         }
 
+        e.preventDefault();
+
         var formData = new FormData();
         formData.append('file', file);
         formData.append('upload_token', window.EASYIMAGE_UPLOAD_TOKEN || uploaderElement.getAttribute('data-upload-token') || '');
@@ -89,8 +90,24 @@ function uploadCopy(copyID, loadClass) {
         }
 
         xhr.onload = function () {
-            var obj = JSON.parse(this.responseText);
+            var obj;
+            try {
+                obj = JSON.parse(this.responseText);
+            } catch (error) {
+                $("#upShowID").removeClass("load-indicator loading");
+                $.zui.messager.show('服务器返回了无效响应，请稍后重试', { icon: 'bell', time: 4000, type: 'danger', placement: 'top' });
+                return;
+            }
+
+            if (this.status < 200 || this.status >= 300) {
+                $("#upShowID").removeClass("load-indicator loading");
+                $.zui.messager.show(obj.message || '上传请求失败，请稍后重试', { icon: 'bell', time: 4000, type: 'danger', placement: 'top' });
+                return;
+            }
+
             if (obj.code === 200) {
+                var resultCard = document.querySelector('.easy-result-card');
+                if (resultCard) resultCard.classList.remove('is-empty');
                 $("#links").append(obj.url + "\r\n");
                 $("#bbscode").append("[img]" + obj.url + "[/img]\r\n");
                 $("#markdown").append("![" + obj.srcName + "](" + obj.url + ")\r\n");
@@ -104,7 +121,6 @@ function uploadCopy(copyID, loadClass) {
                 $("#upShowID").removeClass("load-indicator loading");
 
                 try { // 储存上传记录
-                    console.log('history localStorage success');
                     $.zui.store.set(obj.srcName, obj)
                 } catch (err) {
                     // 存储上传记录失败提示

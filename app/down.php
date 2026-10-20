@@ -1,53 +1,45 @@
 <?php
 
-/**
- * 下载文件
- * https://www.php.cn/php-weizijiaocheng-394566.html
- */
-//获取要下载的文件名
 require_once __DIR__ . '/function.php';
 
-// 空GET
-if (empty($_GET)) {
+$requestedPath = '';
+if (isset($_GET['dw']) && is_string($_GET['dw'])) {
+    $requestedPath = $_GET['dw'];
+} elseif (isset($_GET['history']) && is_string($_GET['history'])) {
+    $requestedPath = $_GET['history'];
+}
+
+if ($requestedPath === '') {
+    http_response_code(400);
     exit('No file path');
 }
 
-// 获取下载路径
-if (isset($_GET['dw'])) {
-    $dw = '../' . $_GET['dw'];
-    // 检查文件是否存在
-    if (!is_file($dw)) {
-        exit('No File');
-    }
+$resolvedPath = resolve_upload_file($requestedPath);
+if (isset($_GET['history']) && !empty($config['hide_path'])) {
+    $resolvedPath = resolve_upload_file($config['path'] . ltrim($requestedPath, '/\\'));
 }
 
-// 历史上传记录的路径
-if (isset($_GET['history'])) {
-    $dw = '../' . $_GET['history'];
-    if ($config['hide_path']) {
-        $dw = '../' . $config['path'] . $_GET['history'];
-    }
-}
-// 检查文件是否存在
-if (!is_file($dw)) {
+if ($resolvedPath === false || !is_file($resolvedPath)) {
+    http_response_code(404);
     exit('No File');
 }
 
-// 过滤下载非指定上传文件格式
-$dw_extension = pathinfo($dw, PATHINFO_EXTENSION);
-$filter_extensions = explode(',', $config['extensions']);
+$extension = strtolower((string) pathinfo($resolvedPath, PATHINFO_EXTENSION));
+$allowedExtensions = array_map('trim', explode(',', strtolower((string) $config['extensions'])));
+$blockedExtensions = array('php', 'json', 'log', 'lock');
 
-// 过滤下载其他格式
-$filter_other = array('php', 'json', 'log', 'lock');
-
-// 先过滤后下载
-if (in_array($dw_extension, $filter_extensions) && !in_array($dw_extension, $filter_other)) {
-    //设置头信息
-    header('Content-Disposition:attachment;filename=' . basename($dw));
-    header('Content-Length:' . filesize($dw));
-    //读取文件并写入到输出缓冲
-    readfile($dw);
-    exit;
-} else {
+if (!in_array($extension, $allowedExtensions, true) || in_array($extension, $blockedExtensions, true)) {
+    http_response_code(415);
     exit('Downfile Type Error');
 }
+
+$mimeType = function_exists('mime_content_type') ? mime_content_type($resolvedPath) : 'application/octet-stream';
+if (!is_string($mimeType) || $mimeType === '') {
+    $mimeType = 'application/octet-stream';
+}
+
+header('Content-Type: ' . $mimeType);
+header('Content-Disposition: attachment; filename*=UTF-8\'\'' . rawurlencode(basename($resolvedPath)));
+header('Content-Length: ' . filesize($resolvedPath));
+header('X-Content-Type-Options: nosniff');
+readfile($resolvedPath);

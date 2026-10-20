@@ -27,6 +27,11 @@ if (!is_who_login('admin')) {
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !validate_csrf_token(isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '')) {
+    http_response_code(403);
+    exit('CSRF validation failed');
+}
+
 // 定义文件位置 
 $config_file = APP_ROOT . '/config/config.php'; // config.php
 $api_key_file = APP_ROOT . '/config/api_key.php'; // api_key.php
@@ -35,6 +40,7 @@ $guest_config_file = APP_ROOT . '/config/config.guest.php'; // config.guest.php
 // 修改config配置
 if (isset($_POST['update'])) {
     $postArr = $_POST;
+    unset($postArr['csrf_token'], $postArr['update']);
 
     if (isset($postArr['storage_driver'])) {
         $postArr['storage_driver'] = strtolower(trim((string) $postArr['storage_driver']));
@@ -47,7 +53,7 @@ if (isset($_POST['update'])) {
     }
 
     if (isset($postArr['user'])) {
-        if ($postArr['user'] == $guestConfig[$postArr['user']])
+        if (isset($guestConfig[$postArr['user']])) {
             echo '
             <script>
             new $.zui.Messager("管理员账号不能与上传者账号相同!", {
@@ -56,7 +62,8 @@ if (isset($_POST['update'])) {
             }).show();
             </script>
             ';
-        exit(header("refresh:1;"));
+            exit(header("refresh:1;"));
+        }
     }
 
     $new_config = array_replace($config, $postArr);
@@ -79,9 +86,16 @@ if (isset($_POST['update'])) {
  * $_POST['add_token_expired'] 过期时间
  */
 if (isset($_POST['add_token_id'])) {
+    $newToken = isset($_POST['add_token']) && is_string($_POST['add_token']) ? trim($_POST['add_token']) : '';
+    $tokenId = isset($_POST['add_token_id']) && is_numeric($_POST['add_token_id']) ? (int) $_POST['add_token_id'] : -1;
+    $tokenDays = isset($_POST['add_token_expired']) && is_numeric($_POST['add_token_expired']) ? (int) $_POST['add_token_expired'] : 0;
+    if ($newToken === '' || !preg_match('/^[A-Za-z0-9_-]{8,128}$/', $newToken) || $tokenId < 0 || $tokenDays < -1) {
+        http_response_code(400);
+        exit('Invalid token parameters');
+    }
     $postArr = array(
-        $_POST['add_token'] => array(
-            'id' => $_POST['add_token_id'], 'expired' => $_POST['add_token_expired'] * 86400 + time(), 'add_time' => time()
+        $newToken => array(
+            'id' => $tokenId, 'expired' => $tokenDays * 86400 + time(), 'add_time' => time()
         )
     );
     $new_config = array_replace($tokenList, $postArr);
@@ -97,9 +111,10 @@ if (isset($_POST['add_token_id'])) {
     header("refresh:1;");
 }
 
-// 禁用Token 
-if (isset($_GET['stop_token'])) {
-    $stop_token = $_GET['stop_token'];
+// 禁用Token
+if (isset($_POST['stop_token'])) {
+    $stop_token = $_POST['stop_token'];
+    if (!isset($tokenList[$stop_token])) exit('Token not found');
     $postArr = array(
         $stop_token => array(
             'id' => 0,
@@ -121,8 +136,8 @@ if (isset($_GET['stop_token'])) {
 }
 
 // 删除Token
-if (isset($_GET['delete_token'])) {
-    unset($tokenList[$_GET['delete_token']]);
+if (isset($_POST['delete_token'])) {
+    unset($tokenList[$_POST['delete_token']]);
     cache_write($api_key_file, $tokenList, 'tokenList');
     echo '
   <script>
@@ -136,8 +151,9 @@ if (isset($_GET['delete_token'])) {
 }
 
 // 禁用用户
-if (isset($_GET['stop_guest'])) {
-    $stop_guest = $_GET['stop_guest'];
+if (isset($_POST['stop_guest'])) {
+    $stop_guest = $_POST['stop_guest'];
+    if (!isset($guestConfig[$stop_guest])) exit('User not found');
     $postArr = array(
         $stop_guest => array(
             'password' => $guestConfig[$stop_guest]['password'],
@@ -160,8 +176,8 @@ if (isset($_GET['stop_guest'])) {
 
 
 // 删除用户
-if (isset($_GET['delete_guest'])) {
-    unset($guestConfig[$_GET['delete_guest']]);
+if (isset($_POST['delete_guest'])) {
+    unset($guestConfig[$_POST['delete_guest']]);
     cache_write($guest_config_file, $guestConfig, 'guestConfig');
     echo '
   <script>
@@ -188,7 +204,7 @@ if (isset($_POST['admin_form'])) {
         ';
         exit(header("refresh:3;"));
     }
-    $postArr = array('user' => $postArr['user'], 'password' => $postArr['password']);
+    $postArr = array('user' => $postArr['user'], 'password' => hash_auth_secret($postArr['password']));
 
     $new_config = array_replace($config, $postArr);
     cache_write($config_file, $new_config);
@@ -220,7 +236,7 @@ if (isset($_POST['uploader_form'])) {
     // 写入上传者用户数据
     $postArr = array(
         $_POST['uploader_user'] => array(
-            'password' => $_POST['uploader_password'],
+            'password' => hash_auth_secret($_POST['uploader_password']),
             'expired' => $_POST['uploader_time'] * 86400 + time(),
             'add_time' => time()
         )
@@ -239,8 +255,13 @@ if (isset($_POST['uploader_form'])) {
 }
 
 // 删除非空目录
-if (isset($_REQUEST['delDir'])) {
-    $delDir = APP_ROOT . $config['path'] . $_REQUEST['delDir'];
+if (isset($_POST['delDir'])) {
+    $delDirName = is_string($_POST['delDir']) ? trim($_POST['delDir']) : '';
+    if ($delDirName === '' || !preg_match('/^[A-Za-z0-9_-]+$/', $delDirName)) {
+        http_response_code(400);
+        exit('Invalid directory name');
+    }
+    $delDir = APP_ROOT . $config['path'] . $delDirName;
     if (deldir($delDir)) {
         echo '
 		<script> new $.zui.Messager("删除成功! ", {
@@ -356,7 +377,7 @@ auto_delete(); //定时删除
                     </div>
                     <!-- <div class="form-group">
                     <label data-toggle="tooltip" title="不懂就不要改本图床仅针对图片上传,如果想上传其他类型文件请更改此出,不同mime请以英文,分割">允许的MIME类型</label>
-                    <input type="text" class="form-control" name="mime" required="required" value="php echo $config['mime'];" onkeyup="this.value=this.value.replace(/\s/g,'')">
+                    <input type="text" class="form-control" name="mime" required="required" value="<?php echo htmlspecialchars($config['mime'], ENT_QUOTES, 'UTF-8'); ?>" onkeyup="this.value=this.value.replace(/\s/g,'')">
                     </div> -->
                     <div class="form-group col-md-3">
                         <label data-toggle="tooltip" title="请以英文 , 分割 最后一个不加 , <br/>非图片格式需在图床安全中关闭图床模式">允许的扩展名 | 非图片格式?</label>
@@ -1136,7 +1157,7 @@ auto_delete(); //定时删除
                         <li>直接输入账号和密码即可完成修改</li>
                         <li>更改后会立即生效并重新登录,请务必牢记账号和密码! </li>
                         <li>如果忘记账号可以打开-><code>/config/config.php</code>文件->找到<code data-toggle="tooltip" title="'user'=><strong>admin</strong>'">user</code>对应的键值->填入</li>
-                        <li>如果忘记密码请将密码->转换成SHA256-><a href="<?php echo $config['domain'] . '/app/reset_password.php'; ?>" target="_blank" class="text-purple">转换网址</a>->打开<code>/config/config.php</code>文件->找到<code data-toggle="tooltip" title="'password'=>'<strong>e6e0612609</strong>'">password</code>对应的键值->填入</li>
+                        <li>忘记密码请通过服务器控制台或重新执行安装流程重置，不要手动写入明文密码。</li>
                     </ul>
                 </div>
             </div>
@@ -1571,7 +1592,6 @@ auto_delete(); //定时删除
 <link rel="stylesheet" href="<?php static_cdn(); ?>/public/static/zui/lib/datagrid/zui.datagrid.min.css">
 <link rel="stylesheet" href="<?php static_cdn(); ?>/public/static/zui/lib/datetimepicker/datetimepicker.min.css">
 <script type="application/javascript" src="<?php static_cdn(); ?>/public/static/crypto/SHA256.js"></script>
-<script type="application/javascript" src="<?php static_cdn(); ?>/public/static/crypto/SHA256.js"></script>
 <script type="application/javascript" src="<?php static_cdn(); ?>/public/static/jscolor/jscolor.min.js"></script>
 <script type="application/javascript" src="<?php static_cdn(); ?>/public/static/zui/lib/datagrid/zui.datagrid.min.js"></script>
 <script type="application/javascript" src="<?php static_cdn(); ?>/public/static/zui/lib/datetimepicker/datetimepicker.min.js"></script>
@@ -1583,7 +1603,7 @@ auto_delete(); //定时删除
             type: "POST", //方法类型
             dataType: "json", //预期服务器返回的数据类型
             url: url, //url
-            data: $("#" + cid).serialize(),
+            data: $("#" + cid).serialize() + "&csrf_token=" + encodeURIComponent(window.EASYIMAGE_CSRF_TOKEN || ''),
             success: function(res) {
                 console.log(res); //打印服务端返回的数据(调试用)
                 // if (res.code === 200) {};
@@ -1597,9 +1617,9 @@ auto_delete(); //定时删除
                     window.location.reload();
                 }, 1500)
             },
-            error: function() {
+            error: function(xhr) {
                 confirm("保存异常,请使用浏览器F12查看控制台信息");
-                console.log(res); //打印服务端返回的数据(调试用)
+                console.error(xhr);
             }
         });
     }
@@ -1608,7 +1628,8 @@ auto_delete(); //定时删除
     function ajax_post(url, mode) {
         $.post("../app/del.php", {
                 url: url,
-                mode: mode
+                mode: mode,
+                csrf_token: window.EASYIMAGE_CSRF_TOKEN || ''
             },
             function(data, status) {
                 let res = JSON.parse(data);
@@ -1623,6 +1644,14 @@ auto_delete(); //定时删除
                     }, 2000)
                 }
             });
+    }
+
+    function adminAction(action, value) {
+        var data = {csrf_token: window.EASYIMAGE_CSRF_TOKEN || ''};
+        data[action] = value;
+        $.post("admin.inc.php", data, function() {
+            window.location.reload();
+        });
     }
 
     // 水印字体颜色
@@ -1854,7 +1883,7 @@ auto_delete(); //定时删除
                         add_time: '<?php echo date('Y-m-d H:i:s', $value['add_time']); ?>',
                         expired: '<?php echo $expired; ?>',
                         number: <?php echo get_file_by_glob(APP_ROOT . $config['path'] . $value['id'], $type = 'number'); ?>,
-                        manage: "<a href='/admin/manager.php?p=<?php echo $value['id']; ?>' target='_blank' class='btn btn-mini btn-success <?php if (!$config['token_path_status']) echo 'disabled'; ?>'>文件</a> <a href='admin.inc.php?stop_token=<?php echo $key; ?>' class='btn btn-mini btn-danger'>禁用</a> <a href='admin.inc.php?delete_token=<?php echo $key; ?>' class='btn btn-mini btn-danger'>删除</a> <a href='#' onclick=\"ajax_post('<?php echo $value['id']; ?>','delDir')\" class='btn btn-mini btn-primary <?php if (!$config['token_path_status']) echo 'disabled'; ?>'>删除上传</a>"
+                        manage: "<a href='/admin/manager.php?p=<?php echo $value['id']; ?>' target='_blank' class='btn btn-mini btn-success <?php if (!$config['token_path_status']) echo 'disabled'; ?>'>文件</a> <a href='#' onclick=\"adminAction('stop_token', '<?php echo addslashes((string) $key); ?>'); return false;\" class='btn btn-mini btn-danger'>禁用</a> <a href='#' onclick=\"adminAction('delete_token', '<?php echo addslashes((string) $key); ?>'); return false;\" class='btn btn-mini btn-danger'>删除</a> <a href='#' onclick=\"ajax_post('<?php echo $value['id']; ?>','delDir')\" class='btn btn-mini btn-primary <?php if (!$config['token_path_status']) echo 'disabled'; ?>'>删除上传</a>"
                     },
                 <?php endforeach; ?>
             ]
@@ -1892,7 +1921,7 @@ auto_delete(); //定时删除
                     width: 0.1
                 },
                 {
-                    label: '密码 (SHA256)',
+                    label: '密码哈希',
                     name: 'password',
                     html: true,
                     width: 0.2
@@ -1932,7 +1961,7 @@ auto_delete(); //定时删除
                         add_time: '<?php echo date('Y-m-d H:i:s', $v['add_time']); ?>',
                         expired: '<?php echo $expired; ?>',
                         files: <?php echo get_file_by_glob(APP_ROOT . $config['path'] . $k, $type = 'number'); ?>,
-                        manage: "<a href='/admin/manager.php?p=<?php echo $k; ?>' target='_blank' class='btn btn-mini btn-success <?php if (!$config['guest_path_status']) echo 'disabled'; ?>'>文件</a> <a href='admin.inc.php?stop_guest=<?php echo $k; ?>' class='btn btn-mini btn-danger'>禁用</a> <a class='btn btn-mini btn-danger' href='admin.inc.php?delete_guest=<?php echo $k; ?>'>删除</a> <a class='btn btn-mini btn-primary <?php if (!$config['guest_path_status']) echo 'disabled'; ?>' href='#' onclick=\"ajax_post('<?php echo $k; ?>','delDir')\">删除上传</a>",
+                        manage: "<a href='/admin/manager.php?p=<?php echo $k; ?>' target='_blank' class='btn btn-mini btn-success <?php if (!$config['guest_path_status']) echo 'disabled'; ?>'>文件</a> <a class='btn btn-mini btn-danger' href='#' onclick=\"adminAction('stop_guest', '<?php echo addslashes((string) $k); ?>'); return false;\">禁用</a> <a class='btn btn-mini btn-danger' href='#' onclick=\"adminAction('delete_guest', '<?php echo addslashes((string) $k); ?>'); return false;\">删除</a> <a class='btn btn-mini btn-primary <?php if (!$config['guest_path_status']) echo 'disabled'; ?>' href='#' onclick=\"ajax_post('<?php echo $k; ?>','delDir')\">删除上传</a>",
                     },
                 <?php endforeach; ?>
             ]

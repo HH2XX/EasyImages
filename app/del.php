@@ -8,6 +8,11 @@
 
 require __DIR__ . '/function.php';
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !validate_csrf_token(isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '')) {
+    http_response_code(403);
+    exit(json_encode(array('code' => 403, 'msg' => 'CSRF validation failed'), JSON_UNESCAPED_UNICODE));
+}
+
 $requestedDeleteStorage = isset($_REQUEST['storage']) ? strtolower(trim((string) $_REQUEST['storage'])) : '';
 if (in_array($requestedDeleteStorage, array('webdav', 's3'), true)) {
     $config['storage_driver'] = $requestedDeleteStorage;

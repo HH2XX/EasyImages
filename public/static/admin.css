@@ -637,3 +637,351 @@ footer.container.navbar-fixed-bottom a:hover {
         transition: none !important;
     }
 }
+
+/* Match the frontend with a calm, layered settings workspace. */
+body.container,
+body.container-fixed-lg {
+    position: relative;
+    isolation: isolate;
+}
+
+body.container::before,
+body.container-fixed-lg::before {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    content: "";
+    background-image:
+        linear-gradient(rgba(31, 43, 51, 0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(31, 43, 51, 0.022) 1px, transparent 1px);
+    background-size: 42px 42px;
+    -webkit-mask-image: linear-gradient(180deg, #000000, transparent 78%);
+    mask-image: linear-gradient(180deg, #000000, transparent 78%);
+}
+
+.admin-page-heading {
+    position: relative;
+    padding-top: 8px;
+}
+
+.admin-page-heading::before {
+    position: absolute;
+    top: 0;
+    left: 2px;
+    width: 54px;
+    height: 4px;
+    content: "";
+    background: linear-gradient(90deg, var(--admin-primary), #d99135);
+    border-radius: 999px;
+}
+
+.admin-page-heading h1 {
+    letter-spacing: 0.01em;
+}
+
+.admin-settings-layout > .tab-content,
+.nav-tabs.nav-stacked,
+.admin-chart > .col-md-12,
+.admin-result-card {
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 250, 0.94)),
+        var(--admin-card);
+    box-shadow: 0 20px 46px rgba(31, 43, 51, 0.08);
+}
+
+.nav-tabs.nav-stacked > li > a {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+.nav-tabs.nav-stacked > li.active > a::before {
+    width: 3px;
+    height: 20px;
+    margin-right: 8px;
+    content: "";
+    background: var(--admin-primary);
+    border-radius: 999px;
+}
+
+.tab-content .form-control {
+    min-height: 39px;
+    border-radius: 7px;
+}
+
+.tab-content textarea.form-control {
+    min-height: 86px;
+}
+
+.tab-content .header-dividing {
+    padding: 10px 12px;
+    color: var(--admin-primary-dark);
+    background: #f1f8f5;
+    border-left: 3px solid var(--admin-primary);
+    border-radius: 6px;
+}
+
+.tab-content .form-group .switch {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.admin-chart .autoshadow {
+    background: rgba(248, 251, 250, 0.88);
+}
+
+body.dark::before,
+body.dark.container::before,
+body.dark.container-fixed-lg::before {
+    opacity: 0.42;
+    background-image:
+        linear-gradient(rgba(229, 239, 238, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(229, 239, 238, 0.025) 1px, transparent 1px);
+}
+
+body.dark .admin-settings-layout > .tab-content,
+body.dark .nav-tabs.nav-stacked,
+body.dark .admin-chart > .col-md-12,
+body.dark .admin-result-card {
+    background:
+        linear-gradient(145deg, rgba(23, 42, 43, 0.96), rgba(18, 36, 38, 0.94)),
+        var(--admin-card);
+}
+
+body.dark .tab-content .header-dividing {
+    color: var(--admin-primary-dark);
+    background: #122426;
+}
+
+body.dark .admin-chart .autoshadow {
+    background: rgba(18, 36, 38, 0.9);
+}
+
+@media screen and (max-width: 767px) {
+    .admin-page-heading {
+        padding-top: 6px;
+    }
+
+    .tab-content .header-dividing {
+        padding: 9px 10px;
+    }
+}
+
+/* Keep the backend visually consistent with the frontend dark mode toggle. */
+body.dark {
+    --admin-ink: #e5efee;
+    --admin-muted: #9fb3b2;
+    --admin-line: #2c4444;
+    --admin-paper: #101e20;
+    --admin-card: #172a2b;
+    --admin-primary: #38bfa5;
+    --admin-primary-dark: #70ddc5;
+    --admin-danger: #e47767;
+    color: var(--admin-ink);
+    background:
+        radial-gradient(circle at 8% 4%, rgba(56, 191, 165, 0.12), transparent 28%),
+        radial-gradient(circle at 92% 6%, rgba(228, 119, 103, 0.1), transparent 24%),
+        var(--admin-paper);
+}
+
+body.dark .page-header,
+body.dark footer.container.navbar-fixed-bottom {
+    background: rgba(16, 30, 32, 0.94) !important;
+    border-color: var(--admin-line);
+}
+
+body.dark .page-header .nav-pills > li > a,
+body.dark footer.container.navbar-fixed-bottom a,
+body.dark .admin-page-heading p,
+body.dark .admin-token-heading small,
+body.dark .tab-content label {
+    color: var(--admin-muted) !important;
+}
+
+body.dark .admin-settings-layout > .tab-content,
+body.dark .nav-tabs.nav-stacked,
+body.dark .admin-chart > .col-md-12,
+body.dark .admin-result-card {
+    background: var(--admin-card);
+    border-color: var(--admin-line);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.18);
+}
+
+body.dark .nav-tabs.nav-stacked > li + li,
+body.dark .tab-content hr,
+body.dark .datagrid .datagrid-cell {
+    border-color: #263c3d;
+}
+
+body.dark .nav-tabs.nav-stacked > li > a,
+body.dark .admin-page-heading h1,
+body.dark .admin-token-heading,
+body.dark .admin-chart .autoshadow,
+body.dark .admin-result-card pre {
+    color: var(--admin-ink);
+}
+
+body.dark .nav-tabs.nav-stacked > li > a:hover,
+body.dark .nav-tabs.nav-stacked > li.active > a,
+body.dark .nav-tabs.nav-stacked > li.active > a:focus,
+body.dark .nav-tabs.nav-stacked > li.active > a:hover,
+body.dark .datagrid .datagrid-row:hover .datagrid-cell {
+    color: #09231f;
+    background: #b5eee1;
+}
+
+body.dark .tab-content .form-control,
+body.dark .tab-content .input-group-addon,
+body.dark .admin-chart .autoshadow,
+body.dark .admin-result-card pre,
+body.dark .datagrid .datagrid-head,
+body.dark .datagrid .datagrid-cell-head {
+    color: #dcebea;
+    background: #122426;
+    border-color: var(--admin-line);
+}
+
+body.dark .tab-content .form-control:focus {
+    border-color: var(--admin-primary);
+    box-shadow: 0 0 0 3px rgba(56, 191, 165, 0.18);
+}
+
+footer.container.navbar-fixed-bottom #dark {
+    cursor: pointer;
+}
+
+footer.container.navbar-fixed-bottom #dark:focus-visible {
+    outline: 2px solid var(--admin-primary);
+    outline-offset: 2px;
+}
+
+/* Make dense configuration pages easier to scan and operate. */
+body.container,
+body.container-fixed-lg {
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+body.container :focus-visible,
+body.container-fixed-lg :focus-visible {
+    outline: 2px solid var(--admin-primary);
+    outline-offset: 2px;
+}
+
+.admin-settings-layout > .tab-content {
+    position: relative;
+    overflow: hidden;
+}
+
+.admin-settings-layout > .tab-content::before,
+.admin-chart > .col-md-12::before,
+.admin-result-card::before {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 3px;
+    content: "";
+    background: linear-gradient(90deg, var(--admin-primary), #d99135);
+}
+
+.admin-chart > .col-md-12,
+.admin-result-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-tabs.nav-stacked > li > a {
+    position: relative;
+    transition: color 0.16s ease, background-color 0.16s ease, padding-left 0.16s ease;
+}
+
+.nav-tabs.nav-stacked > li > a:hover,
+.nav-tabs.nav-stacked > li.active > a {
+    padding-left: 16px;
+}
+
+.tab-content .form-group > label {
+    letter-spacing: 0.01em;
+}
+
+.tab-content .form-control,
+.tab-content .input-group-addon {
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+.tab-content input[type="checkbox"],
+.tab-content input[type="radio"] {
+    accent-color: var(--admin-primary);
+}
+
+.tab-content .switch {
+    padding: 8px 10px;
+    background: #f7faf9;
+    border: 1px solid #e2e9eb;
+    border-radius: 7px;
+}
+
+.tab-content .switch:hover {
+    border-color: rgba(22, 125, 116, 0.36);
+    background: #f0f8f5;
+}
+
+.tab-content form > .btn-primary,
+.tab-content form > .btn-success {
+    min-width: 92px;
+    margin-top: 6px;
+    font-weight: 700;
+    box-shadow: 0 8px 18px rgba(22, 125, 116, 0.14);
+}
+
+.admin-chart .autoshadow {
+    transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.admin-chart .autoshadow:hover {
+    transform: translateY(-2px);
+}
+
+body.dark .tab-content .switch {
+    background: #122426;
+    border-color: var(--admin-line);
+}
+
+body.dark .tab-content .switch:hover {
+    background: #173736;
+    border-color: var(--admin-primary);
+}
+
+@media screen and (max-width: 767px) {
+    .admin-settings-layout > .tab-content {
+        padding: 18px 14px;
+    }
+
+    .tab-content .form-group {
+        margin-bottom: 14px;
+    }
+
+    .tab-content form > .btn-primary,
+    .tab-content form > .btn-success {
+        width: 100%;
+        min-height: 42px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.container,
+    body.container-fixed-lg,
+    .nav-tabs.nav-stacked > li > a,
+    .tab-content .form-control,
+    .tab-content .input-group-addon,
+    .admin-chart .autoshadow {
+        transition: none;
+    }
+
+    .admin-chart .autoshadow:hover {
+        transform: none;
+    }
+}

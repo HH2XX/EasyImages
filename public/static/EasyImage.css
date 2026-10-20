@@ -294,6 +294,10 @@ body.container > .row {
     box-shadow: var(--ei-shadow);
 }
 
+.easy-result-card.is-empty {
+    display: none;
+}
+
 .easy-upload-title {
     display: flex;
     gap: 12px;
@@ -1289,6 +1293,157 @@ footer.container.navbar-fixed-bottom.easy-footer a:hover {
     }
 }
 
+/* Soft mint visual system: clearer hierarchy with less visual noise. */
+body.container {
+    position: relative;
+    isolation: isolate;
+}
+
+body.container::before {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    content: "";
+    background-image:
+        linear-gradient(rgba(21, 34, 50, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(21, 34, 50, 0.025) 1px, transparent 1px);
+    background-size: 42px 42px;
+    -webkit-mask-image: linear-gradient(180deg, #000000, transparent 75%);
+    mask-image: linear-gradient(180deg, #000000, transparent 75%);
+}
+
+.easy-home {
+    position: relative;
+}
+
+.easy-hero h1 {
+    color: transparent;
+    background: linear-gradient(110deg, #0b6d60 0%, #14a78c 48%, #d99135 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+.easy-hero > p {
+    max-width: 680px;
+    color: #657783;
+}
+
+.easy-notice {
+    background: rgba(255, 255, 255, 0.7);
+    border-color: rgba(18, 151, 127, 0.16);
+    box-shadow: 0 10px 26px rgba(22, 44, 58, 0.04);
+    backdrop-filter: blur(10px);
+}
+
+.easy-upload-card .uploader {
+    position: relative;
+    padding: 20px;
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(239, 249, 246, 0.9)),
+        var(--ei-card);
+    border-color: rgba(18, 151, 127, 0.2);
+    box-shadow: 0 24px 58px rgba(22, 44, 58, 0.1);
+}
+
+.easy-upload-card .uploader::before {
+    position: absolute;
+    top: 0;
+    right: 18px;
+    left: 18px;
+    height: 3px;
+    content: "";
+    background: linear-gradient(90deg, var(--ei-mint), var(--ei-amber));
+    border-radius: 0 0 4px 4px;
+}
+
+.easy-upload-title > .icon {
+    border-radius: 12px;
+    box-shadow: 0 12px 26px rgba(18, 151, 127, 0.25);
+}
+
+.easy-upload-card .uploader-files {
+    background:
+        radial-gradient(circle at center, rgba(18, 151, 127, 0.055), transparent 58%),
+        rgba(255, 255, 255, 0.8);
+    border-color: rgba(18, 151, 127, 0.28) !important;
+}
+
+.easy-upload-card .uploader-files::before {
+    color: #536b73;
+}
+
+.easy-upload-card .uploader-actions .btn {
+    min-height: 38px;
+    padding-right: 14px;
+    padding-left: 14px;
+}
+
+.easy-storage-switch {
+    background: rgba(255, 255, 255, 0.76);
+    border-color: rgba(18, 151, 127, 0.16);
+    box-shadow: 0 12px 30px rgba(22, 44, 58, 0.05);
+    backdrop-filter: blur(10px);
+}
+
+.easy-storage-option {
+    min-height: 38px;
+    background: rgba(255, 255, 255, 0.84);
+}
+
+.easy-result-card {
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 20px 48px rgba(22, 44, 58, 0.08);
+    backdrop-filter: blur(10px);
+}
+
+body.dark::before {
+    opacity: 0.42;
+    background-image:
+        linear-gradient(rgba(231, 241, 240, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(231, 241, 240, 0.025) 1px, transparent 1px);
+}
+
+body.dark .easy-hero h1 {
+    background: linear-gradient(110deg, #79e0c9 0%, #38c7ab 52%, #f0bd74 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+body.dark .easy-hero > p {
+    color: var(--ei-muted);
+}
+
+body.dark .easy-notice,
+body.dark .easy-upload-card .uploader,
+body.dark .easy-storage-switch,
+body.dark .easy-result-card {
+    background:
+        linear-gradient(145deg, rgba(23, 41, 43, 0.96), rgba(18, 36, 38, 0.94)),
+        var(--ei-card);
+}
+
+body.dark .easy-upload-card .uploader-files {
+    background:
+        radial-gradient(circle at center, rgba(56, 199, 171, 0.08), transparent 58%),
+        #122426;
+}
+
+body.dark .easy-storage-option {
+    background: rgba(18, 36, 38, 0.9);
+}
+
+@media screen and (max-width: 767px) {
+    .easy-upload-card .uploader {
+        padding: 16px;
+    }
+
+    .easy-upload-card .uploader::before {
+        right: 14px;
+        left: 14px;
+    }
+}
+
 @media screen and (max-width: 991px) {
     body.container {
         padding-top: 0;
@@ -1310,6 +1465,73 @@ footer.container.navbar-fixed-bottom.easy-footer a:hover {
 
     .easy-gallery-admin-actions {
         margin-left: 0;
+    }
+}
+
+/* Keep the initial upload workflow visible within one desktop viewport. */
+@media screen and (min-width: 992px) and (min-height: 620px) {
+    body.container {
+        padding-bottom: 18px;
+    }
+
+    .page-header {
+        margin-bottom: 10px;
+    }
+
+    .easy-home {
+        gap: 9px;
+    }
+
+    .easy-hero {
+        padding-top: 6px;
+        padding-bottom: 1px;
+    }
+
+    .easy-hero h1 {
+        font-size: 34px;
+    }
+
+    .easy-hero > p {
+        margin-top: 6px;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .easy-hero-meta {
+        margin-top: 8px;
+    }
+
+    .easy-hero-meta span {
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+
+    .easy-notice {
+        min-height: 36px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    .easy-upload-card .uploader {
+        padding: 13px;
+    }
+
+    .easy-upload-title {
+        margin-bottom: 10px;
+    }
+
+    .easy-upload-card .uploader-files {
+        min-height: 188px !important;
+    }
+
+    .easy-upload-card .uploader-actions {
+        padding-top: 8px;
+    }
+
+    .easy-storage-switch {
+        gap: 9px;
+        padding: 10px 12px;
+        margin-top: 10px;
     }
 }
 
@@ -1550,5 +1772,214 @@ footer.container.navbar-fixed-bottom.easy-footer a:hover {
     .listNum .card:hover .bottom-bar {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* Dark mode follows the existing footer toggle without changing the markup. */
+body.dark {
+    --ei-ink: #e7f1f0;
+    --ei-muted: #9fb4b5;
+    --ei-line: #294344;
+    --ei-card: #17292b;
+    --ei-paper: #0f1d20;
+    --ei-mint: #38c7ab;
+    --ei-mint-dark: #79e0c9;
+    color: var(--ei-ink);
+    background:
+        radial-gradient(circle at 8% 8%, rgba(56, 199, 171, 0.12), transparent 28%),
+        radial-gradient(circle at 92% 8%, rgba(217, 145, 53, 0.1), transparent 26%),
+        var(--ei-paper);
+}
+
+body.dark .page-header {
+    background: rgba(15, 29, 32, 0.9);
+    border-bottom-color: var(--ei-line);
+}
+
+body.dark .page-header .nav-pills > li > a,
+body.dark .easy-hero > p,
+body.dark .easy-section-heading p,
+body.dark .easy-storage-title small,
+body.dark .easy-storage-switch p,
+body.dark .easy-upload-title p,
+body.dark .easy-upload-card .uploader-status,
+body.dark footer.container.navbar-fixed-bottom.easy-footer a {
+    color: var(--ei-muted) !important;
+}
+
+body.dark .easy-notice,
+body.dark .easy-storage-switch,
+body.dark .easy-upload-card .uploader,
+body.dark .easy-result-card,
+body.dark .easy-storage-option {
+    background: rgba(23, 41, 43, 0.94);
+    border-color: var(--ei-line);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.18);
+}
+
+body.dark .easy-notice,
+body.dark .easy-storage-title,
+body.dark .easy-output-label,
+body.dark .easy-upload-title h2,
+body.dark .easy-section-heading h1,
+body.dark .easy-section-heading h2 {
+    color: var(--ei-ink);
+}
+
+body.dark .easy-upload-card .uploader-files,
+body.dark .easy-result-card .tab-content {
+    background: #122426;
+    border-color: #396061 !important;
+}
+
+body.dark .easy-upload-card .uploader-files::before,
+body.dark .easy-storage-option,
+body.dark .easy-result-card .nav-tabs > li > a {
+    color: #c8d9d8;
+}
+
+body.dark .easy-storage-option.active,
+body.dark .easy-storage-option:has(input:checked),
+body.dark .easy-result-card .nav-tabs > li.active > a,
+body.dark .easy-result-card .nav-tabs > li > a:hover {
+    color: #08221e;
+    background: var(--ei-mint);
+    border-color: var(--ei-mint);
+}
+
+body.dark .easy-result-card textarea.form-control {
+    color: #dcebea;
+    background: #0f1d20;
+    border-color: var(--ei-line);
+}
+
+body.dark .easy-upload-card .uploader-actions .btn {
+    color: #c8d9d8;
+    background: #1d3537;
+    border-color: var(--ei-line);
+}
+
+body.dark footer.container.navbar-fixed-bottom.easy-footer a:hover {
+    color: var(--ei-mint-dark) !important;
+    background: #1d3537;
+    border-color: #396061;
+}
+
+footer.container.navbar-fixed-bottom.easy-footer #dark {
+    cursor: pointer;
+}
+
+footer.container.navbar-fixed-bottom.easy-footer #dark:focus-visible {
+    outline: 2px solid var(--ei-mint);
+    outline-offset: 2px;
+}
+
+/* Final interaction polish for upload and result states. */
+body.container {
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+body.container :focus-visible {
+    outline: 2px solid var(--ei-mint);
+    outline-offset: 2px;
+}
+
+.easy-hero-meta span {
+    transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.easy-hero-meta span:hover {
+    background: #ffffff;
+    border-color: rgba(18, 151, 127, 0.34);
+    transform: translateY(-1px);
+}
+
+.easy-storage-option {
+    box-shadow: 0 4px 12px rgba(22, 44, 58, 0.03);
+}
+
+.easy-storage-option:hover:not(.disabled) {
+    border-color: rgba(18, 151, 127, 0.46);
+    box-shadow: 0 8px 18px rgba(18, 151, 127, 0.08);
+    transform: translateY(-1px);
+}
+
+.easy-upload-card .uploader-files {
+    position: relative;
+}
+
+.easy-upload-card .uploader-files:focus-within {
+    border-color: var(--ei-mint) !important;
+    box-shadow: inset 0 0 0 1px rgba(18, 151, 127, 0.12), 0 0 0 4px rgba(18, 151, 127, 0.08);
+}
+
+.easy-upload-card .uploader-files.dragover,
+.easy-upload-card .uploader-files.is-dragover,
+.easy-upload-card .uploader-files:hover:active {
+    background: #eaf6f3;
+    border-color: var(--ei-mint) !important;
+    box-shadow: inset 0 0 0 1px rgba(18, 151, 127, 0.14), 0 10px 24px rgba(18, 151, 127, 0.08);
+}
+
+.easy-result-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.easy-result-card::before {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 3px;
+    content: "";
+    background: linear-gradient(90deg, var(--ei-mint), var(--ei-amber));
+}
+
+.easy-result-card .tab-content textarea.form-control {
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.easy-result-card .tab-content textarea.form-control:focus {
+    border-color: var(--ei-mint);
+    box-shadow: 0 0 0 3px rgba(18, 151, 127, 0.1);
+}
+
+body.dark .easy-hero-meta span:hover,
+body.dark .easy-upload-card .uploader-files.dragover,
+body.dark .easy-upload-card .uploader-files.is-dragover,
+body.dark .easy-upload-card .uploader-files:hover:active {
+    background: #173736;
+}
+
+body.dark .easy-upload-card .uploader-files:focus-within {
+    box-shadow: inset 0 0 0 1px rgba(56, 199, 171, 0.18), 0 0 0 4px rgba(56, 199, 171, 0.12);
+}
+
+@media screen and (max-width: 767px) {
+    .easy-upload-card .uploader-actions .btn,
+    .easy-upload-card .uploader-actions .uploader-btn-start {
+        min-height: 40px;
+    }
+
+    .easy-result-card {
+        padding: 16px;
+    }
+
+    .easy-result-card .nav-tabs > li {
+        flex: 1 1 auto;
+    }
+
+    .easy-result-card .nav-tabs > li > a {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.container,
+    .easy-hero-meta span,
+    .easy-storage-option,
+    .easy-result-card .tab-content textarea.form-control {
+        transition: none;
     }
 }

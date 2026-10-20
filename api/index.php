@@ -19,8 +19,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    header('Allow: POST, OPTIONS');
+    exit(json_encode(array(
+        'result' => 'failed',
+        'code' => 405,
+        'message' => 'Only POST requests are allowed',
+    ), JSON_UNESCAPED_UNICODE));
+}
+
 // 无文件
-if (empty($_FILES['image'])) {
+if (empty($_FILES['image']) || !is_array($_FILES['image'])) {
     exit(json_encode(
         array(
             "result"  =>  "failed",
@@ -29,6 +39,14 @@ if (empty($_FILES['image'])) {
         ),
         JSON_UNESCAPED_UNICODE
     ));
+}
+
+if (!isset($_FILES['image']['error']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+    exit(json_encode(array(
+        'result' => 'failed',
+        'code' => 400,
+        'message' => 'Upload failed',
+    ), JSON_UNESCAPED_UNICODE));
 }
 
 // 黑/白IP名单上传
@@ -44,17 +62,26 @@ if ($config['check_ip']) {
 }
 
 // 获取Token并过滤非字母数字, 删除空格
-$token = isset($_POST['token']) ? preg_replace('/[\W]/', '', $_POST['token']) : '';
+$token = isset($_POST['token']) && is_string($_POST['token']) ? trim($_POST['token']) : '';
 
 // 检查api合法性
 check_api($token);
-$tokenID = $tokenList[$token]['id'];
+check_api($token);
+$tokenID = isset($tokenList[$token]['id']) ? (int) $tokenList[$token]['id'] : 0;
 
 // 分片上传
 if (!$config['chunks']) {
     $handle = new Upload($_FILES['image'], 'zh_CN');
 } else {
-    $chunk = chunk($_POST['name']);
+    $chunkName = isset($_POST['name']) && is_string($_POST['name']) ? $_POST['name'] : '';
+    $chunk = chunk($chunkName);
+    if ($chunk === null) {
+        exit(json_encode(array(
+            "result" => "success",
+            "code" => 201,
+            "message" => "分片已接收",
+        ), JSON_UNESCAPED_UNICODE));
+    }
     $handle = new Upload($chunk, 'zh_CN');
 }
 
@@ -64,8 +91,15 @@ if ($handle->uploaded) {
         $handle->allowed = array('image/*');
     }
 
-    // 检查svg是否存在script和a标签代码
+    // SVG is disabled by default because blacklist-only sanitization is unsafe.
     if ($handle->file_src_name_ext === 'svg') {
+        if (empty($config['allow_svg'])) {
+            exit(json_encode(array(
+                "result" => "failed",
+                "code" => 415,
+                "message" => "SVG 上传已关闭，请转换为 PNG 或 WebP。",
+            ), JSON_UNESCAPED_UNICODE));
+        }
         $svg = file_get_contents($handle->file_src_pathname);
         if (preg_match('/<script[\s\S]*?<\/script>/', $svg) || stripos($svg, 'href=')) {
             exit(json_encode(
@@ -132,8 +166,12 @@ if ($handle->uploaded) {
         }
         // 图片相对路径
         $pathIMG = $Img_path . $handle->file_dst_name;
+        $selectedStorageDriver = function_exists('remote_storage_driver') ? remote_storage_driver() : 'local';
+        $directRemoteStorage = in_array($selectedStorageDriver, array('webdav', 's3'), true);
         // 图片访问网址
-        $imageUrl = rand_imgurl() . $pathIMG;
+        $imageUrl = $directRemoteStorage
+            ? remote_storage_public_url($pathIMG, $selectedStorageDriver)
+            : rand_imgurl() . $pathIMG;
         // 后续处理地址
         $processUrl = $config['domain'] . $pathIMG;
         // 隐藏config文件中的path目录,需要搭配网站设置
@@ -141,12 +179,15 @@ if ($handle->uploaded) {
             $imageUrl = str_replace($config['path'], '/', $imageUrl);
         }
         // 源图保护 key值是由crc32加密的hide_key
-        if ($config['hide']) {
+        if ($config['hide'] && !$directRemoteStorage) {
             $imageUrl = $config['domain'] . '/app/hide.php?key=' . urlHash($pathIMG, 0, crc32($config['hide_key']));
         }
         // 删除文件链接
         if ($config['show_user_hash_del']) {
             $delUrl = $config['domain'] . '/app/del.php?hash=' . urlHash($pathIMG, 0);
+            if ($directRemoteStorage) {
+                $delUrl .= '&storage=' . $selectedStorageDriver;
+            }
         } else {
             $delUrl = "Admin closed user delete";
         }
@@ -164,6 +205,28 @@ if ($handle->uploaded) {
             $handleThumb = $config['domain'] . $config['path'] . 'cache/' . $handle->file_dst_name;
         }
 
+        if ($directRemoteStorage) {
+            $handleThumb = $imageUrl;
+            @water($handle->file_dst_pathname);
+            @process_compress($handle->file_dst_pathname);
+            @write_ip_upload_count_logs();
+            @write_upload_logs($pathIMG, $handle->file_src_name, $handle->file_dst_pathname, $handle->file_src_size, $tokenID);
+            @process_checkImg($processUrl);
+
+            $oldCompleteDelLocal = isset($config['ftp_complete_del_local']) ? $config['ftp_complete_del_local'] : 0;
+            $config['ftp_complete_del_local'] = 1;
+            $remoteUploaded = any_upload($pathIMG, APP_ROOT . $pathIMG, 'upload');
+            $config['ftp_complete_del_local'] = $oldCompleteDelLocal;
+            if (!$remoteUploaded) {
+                unset($handle);
+                exit(json_encode(array(
+                    "result" => "failed",
+                    "code" => 502,
+                    "message" => "远程存储上传失败，请检查存储配置和目录权限。",
+                ), JSON_UNESCAPED_UNICODE));
+            }
+        }
+
         // 上传成功后返回json数据
         $reJson = array(
             "result"  => "success",
@@ -174,6 +237,7 @@ if ($handle->uploaded) {
             "del"     => $delUrl,
             "id"      => $tokenID,  // 2023-02-11 增加返回Token ID
             "message" => "success", // 2023-04-22 增加返回信息
+            "storage" => $selectedStorageDriver,
             // "memory" => getDistUsed(memory_get_peak_usage()), // 占用内存 2023-02-12
         );
         echo json_encode($reJson, JSON_UNESCAPED_UNICODE);
@@ -194,20 +258,22 @@ if ($handle->uploaded) {
     }
 
     /** 后续处理 */
-    // 使用fastcgi_finish_request操作
-    if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
-    // 同IP上传日志
-    @write_ip_upload_count_logs();
-    // 日志
-    @write_upload_logs($pathIMG, $handle->file_src_name, $handle->file_dst_pathname, $handle->file_src_size);
-    // 鉴黄
-    @process_checkImg($processUrl);
-    // 水印
-    @water($handle->file_dst_pathname);
-    // 压缩
-    @process_compress($handle->file_dst_pathname);
-    // 上传至其他位置
-    @any_upload($pathIMG, APP_ROOT . $pathIMG, 'upload');
+    if (!$directRemoteStorage) {
+        // 使用fastcgi_finish_request操作
+        if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
+        // 同IP上传日志
+        @write_ip_upload_count_logs();
+        // 日志
+        @write_upload_logs($pathIMG, $handle->file_src_name, $handle->file_dst_pathname, $handle->file_src_size);
+        // 鉴黄
+        @process_checkImg($processUrl);
+        // 水印
+        @water($handle->file_dst_pathname);
+        // 压缩
+        @process_compress($handle->file_dst_pathname);
+        // 上传至其他位置
+        @any_upload($pathIMG, APP_ROOT . $pathIMG, 'upload');
+    }
 
     unset($handle);
 }

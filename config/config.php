@@ -5,7 +5,7 @@ $config=Array
 	'keywords'=>'HH2XX,EasyImage,简单图床,无数据库图床,免费图床,PHP多图上传程序,自适应页面,一键复制链接,HTML5,markdown,bbcode',
 	'description'=>'HH2XX 维护的 EasyImage 是一款支持多文件上传的无数据库图床，兼容手机和电脑，上传后可返回图片直链、Markdown、HTML 与 BBCode 链接。',
 	'tips'=>'<a href="https://github.com/HH2XX/EasyImages" target="_blank" rel="noopener"><i class="icon icon-github"> HH2XX EasyImage 开源项目</i></a>
-<a href="/docs/" target="_blank" rel="noopener"><i class="icon icon-book"> 使用文档</i></a>
+<a href="https://github.com/HH2XX/EasyImages/tree/main/docs" target="_blank" rel="noopener"><i class="icon icon-book"> 使用文档</i></a>
 <a><i class="icon icon-heart"> 简单、稳定、无数据库的图床服务</i></a>
 <a><li class="icon icon-bullhorn text-muted"> 单文件≤10M,单次上传≤30张</li></a>',
 	'notice_status'=>0,
@@ -93,6 +93,7 @@ $config=Array
 	'customize'=>'',
 	'checkEnv'=>0,
 	'allowed'=>1,
+	'allow_svg'=>0,
 	'upload_logs'=>0,
 	'cache_freq'=>2,
 	'upload_first_show'=>1,
@@ -105,6 +106,7 @@ $config=Array
 	'check_ip'=>0,
 	'check_ip_model'=>0,
 	'check_ip_list'=>'',
+	'trusted_proxies'=>'',
 	'md5_black'=>0,
 	'md5_blacklist'=>'',
 	'auto_delete'=>0,
@@ -151,8 +153,8 @@ $config=Array
 <h5>目录保存以 年/月/日/ 递进，非必要请勿修改，否则会导致部分操作不可用。</h5>
 <h5>更改配置或自定义内容时，请确认 HTML 标签已正确闭合。</h5>
 <h5>请勿将本程序用于违法违规用途；本版本由 HH2XX 维护，二次开发时请保留维护者、上游与第三方开源组件的版权声明。</h5>
-<a href="/docs/" target="_blank" rel="noopener"><button type="button" class="btn btn-mini"><i class="icon icon-book"></i> 使用文档</button></a>
+	<a href="https://github.com/HH2XX/EasyImages/tree/main/docs" target="_blank" rel="noopener"><button type="button" class="btn btn-mini"><i class="icon icon-book"></i> 使用文档</button></a>
 </div>',
 	'terms'=>'<div class="row"><div class="col-md-12 col-xs-12"><div class="col-md-3 col-xs-3"><ul class="nav nav-tabs nav-stacked"><li class="active"><a href="#Terms" data-target="#tab3Content1" data-toggle="tab">服务条款</a></li><li><a href="#Privacy" data-target="#tab3Content2" data-toggle="tab">隐私政策</a></li><li><a href="#DMCA" data-target="#tab3Content3" data-toggle="tab">DMCA</a></li></ul></div><div class="col-md-9 col-xs-9"><div class="tab-content col-md-9 col-xs-9"><div class="tab-pane fade active in" id="tab3Content1"><h4>服务条款</h4><hr><p>使用本网站即表示您同意遵守相关法律法规和本站规则。</p><ol><li>请勿上传违法、侵权、恶意或不适合公开传播的内容。</li><li>站点管理员可根据规则删除违规文件、关闭外链或限制访问。</li><li>上传者应自行确认所上传内容拥有合法使用权。</li></ol></div><div class="tab-pane fade" id="tab3Content2"><h4>隐私政策</h4><hr><p>本站可能记录必要的访问、上传和安全日志，用于排查故障、防止滥用和维护服务安全。</p><p>请不要上传包含敏感个人信息的文件。站点管理员应根据所在地法律完善隐私政策。</p></div><div class="tab-pane fade" id="tab3Content3"><h4>DMCA / 版权投诉</h4><hr><p>如需提交版权投诉，请提供权利证明、被投诉文件链接、联系方式以及善意声明。站点管理员应根据所在地法律处理相关请求。</p></div></div></div></div></div>',
-	'update'=>'2026-09-01 00:00:00'
+	'update'=>'2026-10-20 00:00:00'
 	);

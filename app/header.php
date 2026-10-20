@@ -33,6 +33,18 @@
     <script type="application/javascript" src="<?php static_cdn(); ?>/public/static/zui/lib/ieonly/excanvas.js"></script>
   	<![endif]-->
 	<?php /** 页头自定义代码 */ echo $config['customize']; ?>
+	<script>
+		window.EASYIMAGE_CSRF_TOKEN = <?php echo json_encode(get_csrf_token()); ?>;
+		document.addEventListener('submit', function(event) {
+			var form = event.target;
+			if (!form || form.querySelector('input[name="csrf_token"]')) return;
+			var input = document.createElement('input');
+			input.type = 'hidden';
+			input.name = 'csrf_token';
+			input.value = window.EASYIMAGE_CSRF_TOKEN || '';
+			form.appendChild(input);
+		}, true);
+	</script>
 </head>
 
 <body class="container<?php if (defined('EASYIMAGE_LOGIN_STYLE') && EASYIMAGE_LOGIN_STYLE) echo ' login-page-body'; ?>">

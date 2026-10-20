@@ -465,3 +465,71 @@ body.login-page-body footer.container.navbar-fixed-bottom {
         transform: none;
     }
 }
+
+/* Match the frontend and backend dark mode toggle. */
+body.login-page-body.dark {
+    --login-ink: #e7f1f0;
+    --login-muted: #9fb4b5;
+    --login-line: #294344;
+    --login-paper: #0f1d20;
+    --login-mint: #38c7ab;
+    --login-mint-dark: #79e0c9;
+    color: var(--login-ink);
+    background:
+        radial-gradient(circle at 8% 18%, rgba(56, 199, 171, 0.14), transparent 34%),
+        radial-gradient(circle at 92% 20%, rgba(217, 145, 53, 0.1), transparent 30%),
+        var(--login-paper);
+}
+
+body.login-page-body.dark .login-shell .login-panel {
+    background: rgba(23, 41, 43, 0.96);
+    border-color: var(--login-line);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
+}
+
+body.login-page-body.dark .login-shell .formBx {
+    background: linear-gradient(145deg, rgba(23, 41, 43, 0.98), rgba(15, 29, 32, 0.96));
+}
+
+body.login-page-body.dark .login-shell .formBx form h2,
+body.login-page-body.dark .login-shell .login-description {
+    color: var(--login-ink);
+}
+
+body.login-page-body.dark .login-shell .login-description,
+body.login-page-body.dark .login-home-link,
+body.login-page-body.dark .login-shell .formBx form .signup {
+    color: var(--login-muted);
+}
+
+body.login-page-body.dark .login-shell .formBx form input.form-control {
+    color: var(--login-ink);
+    background: #122426;
+    border-color: var(--login-line);
+}
+
+body.login-page-body.dark .login-shell .formBx form input.form-control:focus {
+    background: #172f30;
+    border-color: var(--login-mint);
+}
+
+body.login-page-body.dark .login-shell .formBx form input.form-control::placeholder {
+    color: #78908f;
+}
+
+body.login-page-body.dark .login-shell .formBx form .col img {
+    background: #122426;
+    border-color: var(--login-line);
+}
+
+body.login-page-body.dark .login-signed-in {
+    background: rgba(18, 151, 127, 0.14);
+    border-color: rgba(56, 199, 171, 0.28);
+}
+
+body.login-page-body.dark .login-signed-in p,
+body.login-page-body.dark .login-shell .formBx form .signup a,
+body.login-page-body.dark .login-home-link:hover,
+body.login-page-body.dark .login-home-link:focus {
+    color: var(--login-mint-dark);
+}

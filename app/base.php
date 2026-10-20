@@ -10,7 +10,7 @@ if (!ob_get_level()) {
  * @project     EasyImage - 简单图床
  * @repository  https://github.com/HH2XX/EasyImages
  * @upstream    https://github.com/icret/EasyImages2.0
- * @Last        2026-09-02
+ * @Last        2026-10-20
 
  * 上传服务器后第一次打开会检查运行环境，请根据提示操作；
  * 检查环境仅会在第一开始开始出现，并在config目录下生成EasyImage.lock文件，如需再次查看请删除此文件。
@@ -23,6 +23,10 @@ if (!ob_get_level()) {
 
 // 设置html为utf8
 header('Content-Type:text/html;charset=utf-8');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: SAMEORIGIN');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
 // 定义根目录
 define('APP_ROOT', str_replace(DIRECTORY_SEPARATOR, '/', realpath(dirname(__FILE__) . '/../')));
 // 时区设置 https://www.php.net/manual/zh/timezones.php
@@ -36,6 +40,6 @@ if (empty($_SERVER['SERVER_ADDR'])) {
 // 判断当前系统是否为windows
 define('IS_WIN', strstr(PHP_OS, 'WIN') ? 1 : 0);
 // 定义程序版本
-define('APP_VERSION', '2.8.6');
+define('APP_VERSION', '2.8.7');
 
 /*---------------基础配置结束-------------------*/

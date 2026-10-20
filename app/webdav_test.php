@@ -4,6 +4,16 @@ require __DIR__ . '/function.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    exit(json_encode(array('code' => 405, 'msg' => 'Only POST requests are allowed'), JSON_UNESCAPED_UNICODE));
+}
+
+if (!validate_csrf_token(isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '')) {
+    http_response_code(403);
+    exit(json_encode(array('code' => 403, 'msg' => 'CSRF validation failed'), JSON_UNESCAPED_UNICODE));
+}
+
 if (!is_who_login('admin')) {
     http_response_code(403);
     exit(json_encode(array(

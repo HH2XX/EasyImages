@@ -38,6 +38,72 @@ RexHelper::$ignore_list = array(
 );
 
 session_start();
+
+function filer_csrf_token()
+{
+    if (empty($_SESSION['rexplorer_csrf']) || !is_string($_SESSION['rexplorer_csrf'])) {
+        $_SESSION['rexplorer_csrf'] = function_exists('create_secure_token')
+            ? create_secure_token()
+            : hash('sha256', uniqid('', true) . mt_rand());
+    }
+
+    return $_SESSION['rexplorer_csrf'];
+}
+
+function filer_require_csrf($token)
+{
+    if (!is_string($token) || $token === '' || !auth_hash_equals(filer_csrf_token(), $token)) {
+        http_response_code(403);
+        exit('CSRF validation failed');
+    }
+}
+
+function filer_valid_name($name)
+{
+    return is_string($name)
+        && $name !== ''
+        && $name !== '.'
+        && $name !== '..'
+        && strpos($name, "\0") === false
+        && strpos($name, '/') === false
+        && strpos($name, '\\') === false;
+}
+
+function filer_remote_url_allowed($url)
+{
+    if (!is_string($url)) {
+        return false;
+    }
+    $parts = parse_url($url);
+    if (!is_array($parts) || !in_array(strtolower(isset($parts['scheme']) ? $parts['scheme'] : ''), array('http', 'https'), true)) {
+        return false;
+    }
+
+    $host = isset($parts['host']) ? $parts['host'] : '';
+    if ($host === '') {
+        return false;
+    }
+
+    $ip = gethostbyname($host);
+    if ($ip === $host && filter_var($host, FILTER_VALIDATE_IP) === false) {
+        return false;
+    }
+
+    return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+}
+
+function filer_archive_entry_is_safe($entry)
+{
+    if (!is_string($entry) || $entry === '' || strpos($entry, "\0") !== false) {
+        return false;
+    }
+
+    $entry = str_replace('\\', '/', $entry);
+    return !preg_match('#^(?:/|[A-Za-z]:/|[A-Za-z]:$)#', $entry)
+        && !preg_match('#(^|/)\.\.(?:/|$)#', $entry);
+}
+
+filer_csrf_token();
 ?>
 <!DOCTYPE html>
 <html lang="zh-Hans-CN">
@@ -54,7 +120,8 @@ session_start();
     <meta name="description" content="<?php echo  $config['description']; ?>" />
     <link rel="shortcut icon" href="<?php static_cdn(); ?>/favicon.ico" type="image/x-icon" />
     <link rel="stylesheet" href="<?php static_cdn(); ?>/public/static/zui/css/zui.min.css">
-    <script type="application/javascript" src="<?php static_cdn(); ?>/public/static/zui/lib/jquery/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="<?php static_cdn(); ?>/public/static/file-manager.css?v=<?php echo filemtime(APP_ROOT . '/public/static/file-manager.css'); ?>">
+    <script type="application/javascript" src="<?php static_cdn(); ?>/public/static/zui/lib/jquery/jquery-3.6.4.min.js"></script>
     <script type="application/javascript" src="<?php static_cdn(); ?>/public/static/zui/js/zui.min.js"></script>
     <style type="text/css">
         body {
@@ -76,14 +143,30 @@ session_start();
             width: 320px;
         }
     </style>
+    <script>
+        window.REXPLORER_CSRF_TOKEN = <?php echo json_encode(filer_csrf_token()); ?>;
+        document.addEventListener('submit', function (event) {
+            var form = event.target;
+            if (!form || form.querySelector('input[name="csrf_token"]')) return;
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'csrf_token';
+            input.value = window.REXPLORER_CSRF_TOKEN || '';
+            form.appendChild(input);
+        }, true);
+    </script>
 </head>
 
-<body>
+<body class="easy-file-manager">
     <?php
     // 模块参数
     $view = G('view');
     $action = G('action');
     $path = G('path', '/');
+    if ($action && $action !== 'login' && RexAction::user_info()) {
+        $csrfToken = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : (isset($_GET['csrf_token']) ? $_GET['csrf_token'] : '');
+        filer_require_csrf($csrfToken);
+    }
     // 已登陆
     if (RexAction::user_info()) {
         if ($action) {
@@ -113,7 +196,7 @@ session_start();
                     return false;
                 }
             }
-            location.href = url;
+            location.href = url + (url.indexOf('?') === -1 ? '?' : '&') + 'csrf_token=' + encodeURIComponent(window.REXPLORER_CSRF_TOKEN || '');
         }
     </script>
 </body>
@@ -557,12 +640,12 @@ class RExplorer
                 <li class="' . ($view == 'upload' ? 'active' : '') . '"><a href="?view=upload&path=' . $pdir . '">上传文件</a></li>
                 <li class="' . ($view == 'zip' ? 'active' : '') . '"><a href="?view=zip&path=' . $pdir . '">打包目录</a></li>
                 <li class="' . ($view == 'unzip' ? 'active' : '') . '"><a href="?view=unzip&path=' . $pdir . '">解压文件</a></li>
-                <li class="' . ($view == 'opreset' ? 'active' : '') . '"><a href="?action=opreset&path=' . $path . '">清空OPCache</a></li>
+                <li class="' . ($view == 'opreset' ? 'active' : '') . '"><a href="?action=opreset&path=' . $path . '&csrf_token=' . urlencode(filer_csrf_token()) . '">清空OPCache</a></li>
             </ul>
             <!-- 右侧的导航项目 -->
             <ul class="nav navbar-nav navbar-right">
               <li><a href="your/nice/url">欢迎您, ' . $member['username'] . '</a></li>
-              <li><a href="?action=logout">注销</a></li>
+              <li><a href="?action=logout&csrf_token=' . urlencode(filer_csrf_token()) . '">注销</a></li>
             </ul>
           </div>
         </div>
@@ -650,13 +733,15 @@ class RexAction
      */
     static function act_login()
     {
-        $uname = G('username');
+        $uname = is_string(G('username')) ? G('username') : '';
         if (empty(RexHelper::$users[$uname])) {
             RExplorer::url_redirect('?r=fail', 2, '用户不存在！');
         }
-        if (RexHelper::$users[$uname]['password'] != hash('sha256', (G('password')))) {
+        $password = is_string(G('password')) ? G('password') : '';
+        if (!auth_secret_matches(RexHelper::$users[$uname]['password'], hash('sha256', $password))) {
             RExplorer::url_redirect('?r=fail', 2, '密码错误！');
         }
+        session_regenerate_id(true);
         $_SESSION[RexHelper::$ssid] = array(
             'username' => $uname,
         );
@@ -679,7 +764,7 @@ class RexAction
     static function act_newdir($path)
     {
         $filename = G('filename');
-        if (!$filename) {
+        if (!filer_valid_name($filename)) {
             RExplorer::url_redirect('?path=' . $path, 2, '目录名称无效！');
         }
         $mode = intval(G('mode'), 8);
@@ -701,7 +786,7 @@ class RexAction
     static function act_newfile($path)
     {
         $filename = G('filename');
-        if (!$filename || strpos($filename, '.') === false) {
+        if (!filer_valid_name($filename) || strpos($filename, '.') === false) {
             RExplorer::url_redirect('?path=' . $path, 2, '文件名或扩展名无效！');
         }
         $content = G('content');
@@ -759,8 +844,17 @@ class RexAction
         $sapath = RexHelper::path_rtoa($path);
         // 从远程获取
         if ($fileurl = G('url')) {
-            if ($data = file_get_contents($fileurl)) {
-                $target = $sapath . DIRECTORY_SEPARATOR . basename($fileurl);
+            if (!filer_remote_url_allowed($fileurl)) {
+                RExplorer::url_redirect('?path=' . $path, 2, '远程 URL 不被允许');
+            }
+            $remoteContext = stream_context_create(array(
+                'http' => array('timeout' => 15, 'follow_location' => 0),
+                'https' => array('timeout' => 15, 'follow_location' => 0),
+            ));
+            $data = @file_get_contents($fileurl, false, $remoteContext, 0, 50 * 1024 * 1024);
+            $remoteName = basename((string) parse_url($fileurl, PHP_URL_PATH));
+            if ($data !== false && filer_valid_name($remoteName)) {
+                $target = $sapath . DIRECTORY_SEPARATOR . $remoteName;
                 if (file_put_contents($target, $data)) {
                     RExplorer::url_redirect('?path=' . $path, 1);
                 }
@@ -774,7 +868,11 @@ class RexAction
                 $msg = '错误代码 ' . $_FILES['file']['error'];
                 RExplorer::url_redirect('?path=' . $path, 2, $msg);
             }
-            $target = $sapath . DIRECTORY_SEPARATOR . $_FILES['file']['name'];
+            $uploadName = basename((string) $_FILES['file']['name']);
+            if (!filer_valid_name($uploadName)) {
+                RExplorer::url_redirect('?path=' . $path, 2, '文件名无效');
+            }
+            $target = $sapath . DIRECTORY_SEPARATOR . $uploadName;
             if (file_exists($target)) {
                 $msg = $_FILES['file']['name'] . ' 文件已存在！';
                 RExplorer::url_redirect('?path=' . $path, 2, $msg);
@@ -795,7 +893,7 @@ class RexAction
     static function act_rename($path)
     {
         $filename = G('filename');
-        if (!$filename) {
+        if (!filer_valid_name($filename)) {
             RExplorer::url_redirect('?view=rename&path=' . $path, 2, '名称不能为空！');
         }
         $sapath = RexHelper::path_rtoa($path);
@@ -833,7 +931,7 @@ class RexAction
     static function act_zip($path)
     {
         $filename = G('filename');
-        if (!$filename || !strpos($filename, '.')) {
+        if (!filer_valid_name($filename) || strpos($filename, '.') === false) {
             RExplorer::url_redirect('?path=' . $path, 2, '压缩文件名无效！');
         }
         $filename = RexHelper::path_rtoa($filename);
@@ -955,7 +1053,29 @@ class RexHelper
      */
     static function path_rtoa($path)
     {
-        $path = self::$root . DIRECTORY_SEPARATOR . trim($path, '/\\');
+        if (!is_string($path) || strpos($path, "\0") !== false || preg_match('#(^|[\\\\/])\.\.(?:[\\\\/]|$)#', $path)) {
+            return self::$root . DIRECTORY_SEPARATOR . '__rexplorer_invalid_path__';
+        }
+
+        $relativePath = trim($path, '/\\');
+        $path = self::$root . DIRECTORY_SEPARATOR . $relativePath;
+        $rootReal = realpath(self::$root);
+        $pathReal = realpath($path);
+        $rootNormalized = $rootReal ? rtrim(str_replace('\\', '/', $rootReal), '/') : '';
+        $rootPrefix = $rootNormalized . '/';
+        if ($rootPrefix !== '') {
+            $pathNormalized = $pathReal === false ? '' : rtrim(str_replace('\\', '/', $pathReal), '/');
+            if ($pathNormalized !== '' && $pathNormalized !== $rootNormalized && stripos($pathNormalized, $rootPrefix) !== 0) {
+                return self::$root . DIRECTORY_SEPARATOR . '__rexplorer_invalid_path__';
+            }
+            if ($relativePath !== '') {
+                $parentReal = realpath(dirname($path));
+                if ($parentReal !== false && stripos(str_replace('\\', '/', $parentReal), $rootPrefix) !== 0) {
+                    return self::$root . DIRECTORY_SEPARATOR . '__rexplorer_invalid_path__';
+                }
+            }
+        }
+
         if (DIRECTORY_SEPARATOR != '/') {
             return str_replace('/', DIRECTORY_SEPARATOR, $path);
         }
@@ -1022,6 +1142,13 @@ class ZipHelper
         if (true !== $msg) {
             $msg = var_export($msg, true);
             return false;
+        }
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            if (!filer_archive_entry_is_safe($zip->getNameIndex($i))) {
+                $msg = '压缩包包含非法路径';
+                $zip->close();
+                return false;
+            }
         }
         $zip->extractTo($path);
         $zip->close();

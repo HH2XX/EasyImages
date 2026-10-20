@@ -72,11 +72,15 @@ if (isset($_POST['password']) and isset($_POST['user'])) {
 
     $login = _login($_POST['user'], $_POST['password']);
     $login = json_decode($login, true);
+    $loginMessage = json_encode(
+        isset($login['messege']) ? (string) $login['messege'] : 'Login failed',
+        JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT
+    );
 
     if ($login['code'] == 200) {
         echo '
         <script> 
-            new $.zui.Messager("' . $login["messege"] . '" , {
+            new $.zui.Messager(' . $loginMessage . ' , {
             type: "primary", // 定义颜色主题
             icon: "check" // 定义消息图标
             }).show();
@@ -86,7 +90,7 @@ if (isset($_POST['password']) and isset($_POST['user'])) {
     } else {
         echo '
         <script> 
-            new $.zui.Messager("' . $login["messege"] . '" , {
+            new $.zui.Messager(' . $loginMessage . ' , {
             type: "danger", // 定义颜色主题
             icon: "times" // 定义消息图标
             }).show();
@@ -110,7 +114,7 @@ if (isset($_POST['password']) and isset($_POST['user'])) {
             </div>
             <div class="modal-body">
                 <p class="text-primary">忘记账号可以打开<code>/config/config.php</code>文件找到<code data-toggle="tooltip" title="'user'=><strong>admin</strong>'">user</code>对应的键值->填入</p>
-                <p class="text-success">忘记密码请将密码转换成SHA256(<a href="<?php echo $config['domain'] . '/app/reset_password.php'; ?>" target="_blank" class="text-purple">转换网址</a>)->打开<code>/config/config.php</code>文件->找到<code data-toggle="tooltip" title="'password'=>'<strong>e6e0612609</strong>'">password</code>对应的键值->填入</p>
+                <p class="text-success">忘记密码请通过服务器控制台或重新执行安装流程重置，密码会使用安全哈希保存，不建议手动修改配置文件。</p>
                 <h4 class="text-danger">更改后会立即生效并重新登录,请务必牢记账号和密码! </h4>
             </div>
             <div class="modal-footer">
